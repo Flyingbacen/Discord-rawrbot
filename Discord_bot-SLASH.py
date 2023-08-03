@@ -34,7 +34,7 @@ async def hello(interaction):
 # pop
 @tree.command(name = "pop", description = "a balloon makes this noise once")
 async def ballooonpop(interaction):
-    await interaction.response.send_message("*pop*\n Fun fact, did you know balloons make this noise only once?\n ||I bet I can make that noise with you multiple times, *if you know what I mean 😉*||")
+    await interaction.response.send_message("*pop*\nFun fact, did you know balloons make this noise only once?\n||I bet I can make that noise with you multiple times, *if you know what I mean 😉*||")
     print(f"Having some fun w/ {interaction.user.name}, hehe")
 
 # invite link
