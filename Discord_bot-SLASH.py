@@ -40,9 +40,10 @@ async def ballooonpop(interaction):
 # invite link
 @tree.command(name = "invite", description = "generate in an invite link to let the bot join your server")
 async def invite(interaction):
-    await interaction.response.send_message("https://discord.com/oauth2/authorize?client_id=1118629362368008283&permissions=2147486720&scope=bot&permissions=2147486720&scope=messages.read%20bot")
+    embedd = discord.Embed(description = "[invite link](https://discord.com/oauth2/authorize?client_id=1118629362368008283&permissions=2147486720&scope=bot&permissions=2147486720&scope=messages.read%20bot).", type = "link")
+    await interaction.response.send_message(embed = embedd)
     channel = interaction.channel.name
-    print(f"sent message to {channel}")
+    print(f"sent bot invite to {channel}")
 
 
 # get the slash commands ready, and set the status
