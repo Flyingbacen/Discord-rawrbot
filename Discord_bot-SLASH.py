@@ -37,6 +37,13 @@ async def ballooonpop(interaction):
     await interaction.response.send_message("*pop*\n Fun fact, did you know balloons make this noise only once?\n ||I bet I can make that noise with you multiple times, *if you know what I mean 😉*||")
     print(f"Having some fun w/ {interaction.user.name}, hehe")
 
+# invite link
+@tree.command(name = "invite", description = "generate in an invite link to let the bot join your server")
+async def invite(interaction):
+    await interaction.response.send_message("https://discord.com/oauth2/authorize?client_id=1118629362368008283&permissions=2147486720&scope=bot&permissions=2147486720&scope=messages.read%20bot")
+    channel = interaction.channel.name
+    print(f"sent message to {channel}")
+
 
 # get the slash commands ready, and set the status
 @client.event
