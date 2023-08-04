@@ -50,7 +50,7 @@ async def invite(interaction):
 @client.event
 async def on_ready():
     await tree.sync()
-    game = discord.Game("with some funny words")
+    game = discord.Game("with some funny sounding words")
     await client.change_presence(status=discord.Status.idle, activity=game)
     print("Ready!")
 
