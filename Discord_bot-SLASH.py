@@ -12,12 +12,6 @@ responses = {}
 # a ping command. 
 @tree.command(name = "ping", description = "hopefully counts to a low number :)")
 async def ping(interaction):
-    """
-    await interaction.response.send_message("Counting...")
-    for x in range(9223372036854775807):
-        await ctx.message.channel.send(x)
-    """
-
     start_time = time.time()
     message = await interaction.response.send_message("Pong!")
     latency = round((time.time() - start_time) * 1000, 2)
@@ -40,10 +34,16 @@ async def ballooonpop(interaction):
 # invite link
 @tree.command(name = "invite", description = "generate in an invite link to let the bot join your server")
 async def invite(interaction):
-    embedd = discord.Embed(description = "[invite link](https://discord.com/oauth2/authorize?client_id=1118629362368008283&permissions=2147486720&scope=bot&permissions=2147486720&scope=messages.read%20bot).", type = "link")
+    embedd = discord.Embed(description = "[invite link](https://discord.com/oauth2/authorize?client_id=1118629362368008283&permissions=2147486720&scope=bot&permissions=2147486720&scope=messages.read%20bot)\n(discord.com)", type = "link")
     await interaction.response.send_message(embed = embedd)
     channel = interaction.channel.name
     print(f"sent bot invite to {channel}")
+
+# random informationn
+@tree.command(name = "info", description = "Some random information about the server you're in.")
+async def information(interaction):
+    await interaction.response.send_message(f"server -- {interaction.guild.name} ({interaction.guild.id})\nchannel -- {interaction.channel.name} ({interaction.channel.id})\nUser Information --> \n> Display name -- {interaction.user.display_name}\n> Username -- {interaction.user.name}\n> User ID -- {interaction.user.id}\n> Date Created -- {interaction.user.created_at}")
+    print(f"{interaction.user.name} has asked for information.")
 
 
 # get the slash commands ready, and set the status
