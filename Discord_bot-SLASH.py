@@ -17,7 +17,17 @@ async def ping(interaction):
     latency = round((time.time() - start_time) * 1000, 2)
     await interaction.edit_original_response(content=f"Pong!  |  Latency: {latency} ms")
     print(f"A ping command has been sent, and the round trip took {latency} ms")
-
+    
+@tree.command(name = "ban_list", description = "returns a list of banned users + reason")
+async def fwef(interaction):
+    badaaa = " "
+    bans = [entry async for entry in interaction.guild.bans()]
+    for BanEntry in bans:
+        user = BanEntry.user.global_name
+        reason = BanEntry.reason
+        badaaa += f"User: {user}\nReason: {reason}\n\n"
+    await interaction.response.send_message(badaaa)
+    print(bans)
 
 # nice chat :)
 @tree.command(name = "hello", description = "I would love to talk to you more, but perhaps a simple hello will suffice")
