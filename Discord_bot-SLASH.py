@@ -79,7 +79,7 @@ async def on_message(message):
         print("rawr")
 
     # respond to rawr being in a message
-    if "rawr" != message.content.lower() and "rawr" in message.content.lower() and message.author.id != 1118629362368008283:
+    if "rawr" != message.content.lower() and "rawr" in message.content.lower(): 
         if message.content.startswith("prepare to say something "):
             return
         response_message = await message.channel.send("I hear my name, hello :>")
@@ -101,11 +101,11 @@ async def on_message(message):
 
 
     # counting :)
-    if message.channel.id != 1165795834898698280:  # Compare to an integer, not a string
+    if message.channel.id != COUNTING_CHANNEL:
         return
     count_file = open("CurrentCount.txt", "r+")
     numcount = int(count_file.read())
-    if message.content.lower() == str(numcount):  # Convert numcount to a string for comparison
+    if message.content.lower() == str(numcount):
         numcount += 1
         count_file.seek(0)
         count_file.write(str(numcount))
