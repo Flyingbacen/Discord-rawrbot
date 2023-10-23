@@ -69,6 +69,8 @@ async def on_ready():
 @client.event
 async def on_message(message):
     member = message.author
+    if message.author.id == BOT_ID: # I dunno how to tell a bot apart from a user, so eh, this works
+        return
 
     # respond to rawr
     if message.content.lower() == "rawr":
@@ -97,6 +99,21 @@ async def on_message(message):
             print(f"imma boutta say {quotemessage[1]}")
             return
 
+
+    # counting :)
+    if message.channel.id != 1165795834898698280:  # Compare to an integer, not a string
+        return
+    count_file = open("CurrentCount.txt", "r+")
+    numcount = int(count_file.read())
+    if message.content.lower() == str(numcount):  # Convert numcount to a string for comparison
+        numcount += 1
+        count_file.seek(0)
+        count_file.write(str(numcount))
+    else:
+        await message.delete()
+        bomessage = await message.channel.send(f"{message.content.lower()} is not the correct number")
+        time.sleep(3)
+        await bomessage.delete()
 
 
 # delete the message if the original message to "rawr" is deleted
