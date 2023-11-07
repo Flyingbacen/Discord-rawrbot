@@ -55,6 +55,13 @@ async def information(interaction):
     await interaction.response.send_message(f"server -- {interaction.guild.name} ({interaction.guild.id})\nchannel -- {interaction.channel.name} ({interaction.channel.id})\nUser Information --> \n> Display name -- {interaction.user.display_name}\n> Username -- {interaction.user.name}\n> User ID -- {interaction.user.id}\n> Date Created -- {interaction.user.created_at}")
     print(f"{interaction.user.name} has asked for information.")
 
+# gets the current number for counting
+@tree.command(name = "current_count", description = "gives the current count in the <#1165795834898698280> channel.")
+async def CurrentCount(interaction):
+    count_file = open("CurrentCount.txt", "r+")
+    numcount = int(count_file.read())
+    await interaction.response.send_message(f"the current number is {numcount}", ephemeral = True)
+
 
 # get the slash commands ready, and set the status
 @client.event
