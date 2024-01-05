@@ -2,12 +2,14 @@ import discord
 from discord import app_commands
 import base64
 import time
+import json
 
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 responses = {}
+
 
 # a ping command. 
 @tree.command(name = "ping", description = "hopefully counts to a low number :)")
@@ -16,7 +18,7 @@ async def ping(interaction):
     message = await interaction.response.send_message("Pong!")
     latency = round((time.time() - start_time) * 1000, 2)
     await interaction.edit_original_response(content=f"Pong!  |  Latency: {latency} ms")
-    print(f"A ping command has been sent, and the round trip took {latency} ms")
+    print(f"A ping command has been sent in {interaction.guild.name} -- {interaction.channel.name}, and the round trip took {latency} ms")
     
 @tree.command(name = "ban_list", description = "returns a list of banned users + reason")
 async def fwef(interaction):
@@ -26,8 +28,10 @@ async def fwef(interaction):
         user = BanEntry.user.global_name
         reason = BanEntry.reason
         badaaa += f"User: {user}\nReason: {reason}\n\n"
+    badaaa += "\n\n note: users titled \"none\" have since been deleted since they were banned."
     await interaction.response.send_message(badaaa)
     print(bans)
+
 
 # nice chat :)
 @tree.command(name = "hello", description = "I would love to talk to you more, but perhaps a simple hello will suffice")
@@ -38,8 +42,13 @@ async def hello(interaction):
 # pop
 @tree.command(name = "pop", description = "a balloon makes this noise once")
 async def ballooonpop(interaction):
-    await interaction.response.send_message("*pop*\nFun fact, did you know balloons make this noise only once?\n||I bet I can make that noise with you multiple times, *if you know what I mean 😉*||")
-    print(f"Having some fun w/ {interaction.user.name}, hehe")
+    if interaction.user.id != "932447390672257025":
+        print(f"{interaction.user.id}\n932447390672257025")
+        await interaction.response.send_message("*pop*\nFun fact, did you know balloons make this noise only once?\n||I bet I can make that noise with you multiple times, *if you know what I mean 🤭*||")
+        print(f"Having some fun w/ {interaction.user.name}, hehe")
+    else:
+        await interaction.response.send_message("no")
+        print("ha")
 
 # invite link
 @tree.command(name = "invite", description = "generate in an invite link to let the bot join your server")
@@ -55,19 +64,26 @@ async def information(interaction):
     await interaction.response.send_message(f"server -- {interaction.guild.name} ({interaction.guild.id})\nchannel -- {interaction.channel.name} ({interaction.channel.id})\nUser Information --> \n> Display name -- {interaction.user.display_name}\n> Username -- {interaction.user.name}\n> User ID -- {interaction.user.id}\n> Date Created -- {interaction.user.created_at}")
     print(f"{interaction.user.name} has asked for information.")
 
-# gets the current number for counting
-@tree.command(name = "current_count", description = "gives the current count in the <#1165795834898698280> channel.")
+# current count of counting
+@tree.command(name = "current_count", description = "gives the current count in the counting channel channel.") # go to line 126 to change the channel
 async def CurrentCount(interaction):
     count_file = open("CurrentCount.txt", "r+")
     numcount = int(count_file.read())
     await interaction.response.send_message(f"the current number is {numcount}", ephemeral = True)
+
+@tree.context_menu(name="message")
+async def dm(interaction: discord.Interaction, message: discord.Message):
+    channel = await interaction.user.create_dm()
+    await channel.send("meow >\~<")
+    await interaction.response.send_message(channel.id)
+    
 
 
 # get the slash commands ready, and set the status
 @client.event
 async def on_ready():
     await tree.sync()
-    game = discord.Game("with some funny sounding words")
+    game = discord.Game("with some funny words")
     await client.change_presence(status=discord.Status.idle, activity=game)
     print("Ready!")
 
@@ -76,7 +92,7 @@ async def on_ready():
 @client.event
 async def on_message(message):
     member = message.author
-    if message.author.id == BOT_ID: # I dunno how to tell a bot apart from a user, so eh, this works
+    if message.author.id == 1118629362368008283:
         return
 
     # respond to rawr
@@ -86,7 +102,7 @@ async def on_message(message):
         print("rawr")
 
     # respond to rawr being in a message
-    if "rawr" != message.content.lower() and "rawr" in message.content.lower(): 
+    if "rawr" != message.content.lower() and "rawr" in message.content.lower() and message.author.id != 1118629362368008283:
         if message.content.startswith("prepare to say something "):
             return
         response_message = await message.channel.send("I hear my name, hello :>")
@@ -102,20 +118,20 @@ async def on_message(message):
             sneakyquotemessage = quotemessage[1].split(" be sneaky though,")
             await message.channel.send(sneakyquotemessage[1])
             print(f"sneakily saying {sneakyquotemessage[1]}")
-        elif await message.channel.send(f"ok then!\n > {quotemessage[1]}"):
+        elif await message.channel.send(f">{quotemessage[1]}"):
             print(f"imma boutta say {quotemessage[1]}")
             return
-
-
+    
     # counting :)
-    if message.channel.id != COUNTING_CHANNEL:
+    if not message.channel.id == 1165795834898698280:
         return
     count_file = open("CurrentCount.txt", "r+")
     numcount = int(count_file.read())
-    if message.content.lower() == str(numcount):
+    if message.content.lower() == str(numcount):  # Convert numcount to a string for comparison
         numcount += 1
         count_file.seek(0)
         count_file.write(str(numcount))
+        count_file.close()
     else:
         await message.delete()
         bomessage = await message.channel.send(f"{message.content.lower()} is not the correct number")
@@ -135,7 +151,7 @@ async def on_message_delete(message):
         print(f"bye bye {response_message}")
 
 
-token = TOKEN
+token = "token"
 dsctoken = base64.b64decode(token).decode("utf-8")
 
 client.run(dsctoken)
