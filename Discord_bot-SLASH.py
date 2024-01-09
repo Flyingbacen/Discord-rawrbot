@@ -71,6 +71,68 @@ async def CurrentCount(interaction):
     numcount = int(count_file.read())
     await interaction.response.send_message(f"the current number is {numcount}", ephemeral = True)
 
+@tree.command(name="cue_redeem", description="Redeems the currently available free cue piece from 8ballpool.com's api using your user id")
+async def CueRedeem(interaction: discord.Interaction, userid: int):
+    await interaction.response.defer()
+    import aiohttp
+
+    async with aiohttp.ClientSession() as session:
+        async def get_free_cue_sku(user_id, category_wildcard):
+            url = f'https://8ballpool.com/api/items?userId={user_id}'
+
+            try:
+                async with session.get(url) as response:
+                    response.raise_for_status()  # Check for HTTP errors
+
+                    data = await response.json()
+                    items = data.get('items', [])
+
+                    for item in items:
+                        if category_wildcard in item.get('category', ''):
+                            return item.get('sku')
+
+            except aiohttp.ClientError as e:
+                return None
+
+        async def redeem_free_cue(user_id, sku):
+            url = 'https://8ballpool.com/api/claim'
+            headers = {'content-type': 'application/json'}
+            payload = {
+                "user_id": str(user_id),
+                "sku": sku
+            }
+
+            try:
+                async with session.post(url, headers=headers, json=payload) as response:
+                    response.raise_for_status()
+
+                    print(f"Redemption response status code: {response.status}")
+
+                    if response.status == 200:
+                        return True
+                    else:
+                        return response.status
+
+            except aiohttp.ClientError as e:
+                print(f"Error during redemption: {e}")
+
+        user_id = userid
+        category_wildcard = 'free_cue_reward_'
+
+        # Retrieve SKU for the free piece
+        free_cue_sku = await get_free_cue_sku(user_id, category_wildcard)
+        if free_cue_sku:
+            print(f"SKU for the free cue piece: {free_cue_sku}")
+
+            # Redeem the free cue piece
+            cue_StatusCode = await redeem_free_cue(user_id, free_cue_sku)
+            if cue_StatusCode == True:
+                await interaction.followup.send("Successfully redeemed today's cue piece")
+            else:
+                await interaction.followup.send(f"Error redeeming today's cue piece.\nStatus code:\n\t{cue_StatusCode}")
+        else:
+            await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
+
 @tree.context_menu(name="message")
 async def dm(interaction: discord.Interaction, message: discord.Message):
     channel = await interaction.user.create_dm()
