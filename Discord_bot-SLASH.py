@@ -138,7 +138,7 @@ async def dm(interaction: discord.Interaction, message: discord.Message):
     channel = await interaction.user.create_dm()
     await channel.send("meow >\~<")
     await interaction.response.send_message(channel.id)
-    
+
 
 
 # get the slash commands ready, and set the status
@@ -150,7 +150,7 @@ async def on_ready():
     print("Ready!")
 
 
-# respond to rawr
+
 @client.event
 async def on_message(message):
     member = message.author
@@ -164,9 +164,7 @@ async def on_message(message):
         print("rawr")
 
     # respond to rawr being in a message
-    if "rawr" != message.content.lower() and "rawr" in message.content.lower() and message.author.id != 1118629362368008283:
-        if message.content.startswith("prepare to say something "):
-            return
+    if "rawr" != message.content.lower() and "rawr" in message.content.lower() and message.author.id != 1118629362368008283 and message.content.startswith != "prepare to say something ":
         response_message = await message.channel.send("I hear my name, hello :>")
         responses[message.id] = response_message.id
         print("hello to you too")
