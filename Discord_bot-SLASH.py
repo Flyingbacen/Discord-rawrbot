@@ -3,6 +3,8 @@ from discord import app_commands
 import base64
 import time
 import json
+import aiohttp
+import asyncio
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -65,81 +67,91 @@ async def information(interaction):
     print(f"{interaction.user.name} has asked for information.")
 
 # current count of counting
-@tree.command(name = "current_count", description = "gives the current count in the counting channel channel.") # go to line 126 to change the channel
-async def CurrentCount(interaction):
+@tree.command(name = "current_count", description = "gives the current count in the counting channel channel.")
+async def currentcount(interaction):
     count_file = open("CurrentCount.txt", "r+")
     numcount = int(count_file.read())
     await interaction.response.send_message(f"the current number is {numcount}", ephemeral = True)
+    count_file.close()
 
-@tree.command(name="cue_redeem", description="Redeems the currently available free cue piece from 8ballpool.com's api using your user id")
+# current count of binary counting
+@tree.command(name = "current_count_binary", description = "gives the current count in the binary counting channel.")
+async def currentcountbinary(interaction):
+    count_file_binary = open("CurrentCount-Binary.txt", "r+")
+    numcount_binary = int(count_file_binary.read())
+    await interaction.response.send_message(f"the current number is {numcount_binary}", ephemeral = True)
+    count_file_binary.close()
+
+
+@tree.command(name="cue_redeem", description="Redeems the currently available free cue piece from 8ballpool.com using your user id (1 for help)")
 async def CueRedeem(interaction: discord.Interaction, userid: int):
     await interaction.response.defer()
-    import aiohttp
 
-    async with aiohttp.ClientSession() as session:
-        async def get_free_cue_sku(user_id, category_wildcard):
-            url = f'https://8ballpool.com/api/items?userId={user_id}'
+    if userid == 1:
+        await interaction.followup.send("To find your User ID, go in the 8 ball pool app. Tap your profile icon, and your 10 digit ID in the format 123-456-789-0 will be displayed. Do not include the dashes.", ephemeral=True)
+    else:
+        async with aiohttp.ClientSession() as session:
+            async def get_free_cue_sku(user_id, category_wildcard):
+                url = f'https://8ballpool.com/api/items?userId={user_id}'
 
-            try:
-                async with session.get(url) as response:
-                    response.raise_for_status()  # Check for HTTP errors
+                try:
+                    async with session.get(url) as response:
+                        response.raise_for_status()  # Check for HTTP errors
 
-                    data = await response.json()
-                    items = data.get('items', [])
+                        data = await response.json()
+                        items = data.get('items', [])
 
-                    for item in items:
-                        if category_wildcard in item.get('category', ''):
-                            return item.get('sku')
+                        for item in items:
+                            if category_wildcard in item.get('category', ''):
+                                return item.get('sku')
 
-            except aiohttp.ClientError as e:
-                return None
+                except aiohttp.ClientError as e:
+                    return None
 
-        async def redeem_free_cue(user_id, sku):
-            url = 'https://8ballpool.com/api/claim'
-            headers = {'content-type': 'application/json'}
-            payload = {
-                "user_id": str(user_id),
-                "sku": sku
-            }
+            async def redeem_free_cue(user_id, sku):
+                url = 'https://8ballpool.com/api/claim'
+                headers = {'content-type': 'application/json'}
+                payload = {
+                    "user_id": str(user_id),
+                    "sku": sku
+                }
 
-            try:
-                async with session.post(url, headers=headers, json=payload) as response:
-                    response.raise_for_status()
+                try:
+                    async with session.post(url, headers=headers, json=payload) as response:
+                        response.raise_for_status()
 
-                    print(f"Redemption response status code: {response.status}")
+                        print(f"Redemption response status code: {response.status}")
 
-                    if response.status == 200:
-                        return True
-                    else:
-                        return response.status
+                        if response.status == 200:
+                            return True
+                        else:
+                            return response.status
 
-            except aiohttp.ClientError as e:
-                print(f"Error during redemption: {e}")
+                except aiohttp.ClientError as e:
+                    print(f"Error during redemption: {e}")
 
-        user_id = userid
-        category_wildcard = 'free_cue_reward_'
+            user_id = userid
+            category_wildcard = 'free_cue_reward_'
 
-        # Retrieve SKU for the free piece
-        free_cue_sku = await get_free_cue_sku(user_id, category_wildcard)
-        if free_cue_sku:
-            print(f"SKU for the free cue piece: {free_cue_sku}")
+            # Retrieve SKU for the free piece
+            free_cue_sku = await get_free_cue_sku(user_id, category_wildcard)
+            if free_cue_sku:
+                print(f"SKU for the free cue piece: {free_cue_sku}")
 
-            # Redeem the free cue piece
-            cue_StatusCode = await redeem_free_cue(user_id, free_cue_sku)
-            if cue_StatusCode == True:
-                await interaction.followup.send("Successfully redeemed today's cue piece")
+                # Redeem the free cue piece
+                cue_StatusCode = await redeem_free_cue(user_id, free_cue_sku)
+                if cue_StatusCode == True:
+                    await interaction.followup.send(f"Successfully redeemed today's cue piece\n\t\t~~||sku:{free_cue_sku}||~~")
+                else:
+                    await interaction.followup.send(f"Error redeeming today's cue piece.\nStatus code:\n\t{cue_StatusCode}")
             else:
-                await interaction.followup.send(f"Error redeeming today's cue piece.\nStatus code:\n\t{cue_StatusCode}")
-        else:
-            await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
+                await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
 
 @tree.context_menu(name="message")
 async def dm(interaction: discord.Interaction, message: discord.Message):
     channel = await interaction.user.create_dm()
     await channel.send("meow >\~<")
     await interaction.response.send_message(channel.id)
-
-
 
 # get the slash commands ready, and set the status
 @client.event
@@ -150,10 +162,13 @@ async def on_ready():
     print("Ready!")
 
 
+### NON-SLASH COMMANDS/REPLIES
 
+# respond to rawr
 @client.event
 async def on_message(message):
     member = message.author
+    # ignore messages from the bot	
     if message.author.id == 1118629362368008283:
         return
 
@@ -164,7 +179,9 @@ async def on_message(message):
         print("rawr")
 
     # respond to rawr being in a message
-    if "rawr" != message.content.lower() and "rawr" in message.content.lower() and message.author.id != 1118629362368008283 and message.content.startswith != "prepare to say something ":
+    if "rawr" != message.content.lower() and "rawr" in message.content.lower() and message.author.id != 1118629362368008283:
+        if message.content.startswith("prepare to say something "):
+            return
         response_message = await message.channel.send("I hear my name, hello :>")
         responses[message.id] = response_message.id
         print("hello to you too")
@@ -182,21 +199,36 @@ async def on_message(message):
             print(f"imma boutta say {quotemessage[1]}")
             return
     
-    # counting :)
-    if not message.channel.id == 1165795834898698280:
+    # counting :) 
+    if message.channel.id == 1165795834898698280:
+        count_file = open("CurrentCount.txt", "r+")
+        numcount = int(count_file.read())
+        if message.content.lower() == str(numcount):  # Convert numcount to a string for comparison
+            numcount += 1
+            count_file.seek(0)
+            count_file.write(str(numcount))
+            count_file.close()
+        else:
+            await message.delete()
+            bomessage = await message.channel.send(f"{message.content.lower()} is not the correct number")
+            await asyncio.sleep(3)
+            await bomessage.delete()
+    elif message.channel.id != 1200257700378984509:
         return
-    count_file = open("CurrentCount.txt", "r+")
-    numcount = int(count_file.read())
-    if message.content.lower() == str(numcount):  # Convert numcount to a string for comparison
-        numcount += 1
-        count_file.seek(0)
-        count_file.write(str(numcount))
-        count_file.close()
-    else:
-        await message.delete()
-        bomessage = await message.channel.send(f"{message.content.lower()} is not the correct number")
-        time.sleep(3)
-        await bomessage.delete()
+    else: # A binary counting for some reason idk
+        count_file_binary = open("CurrentCount-Binary.txt", "r+")
+        numcount_binary = int(count_file_binary.read())
+        if f"0b{message.content.lower()}" == bin(numcount_binary):
+            numcount_binary += 1
+            count_file_binary.seek(0)
+            count_file_binary.write(str(numcount_binary))
+            count_file_binary.close()
+        else:
+            await message.delete()
+            njk = await message.channel.send(f"{message.channel.user_id}{message.content.lower()}...\n\tLook at you're mistake >:(")
+            await asyncio.sleep(float(3))
+            await njk.delete()
+
 
 
 # delete the message if the original message to "rawr" is deleted
@@ -211,7 +243,6 @@ async def on_message_delete(message):
         print(f"bye bye {response_message}")
 
 
-token = "token"
-dsctoken = base64.b64decode(token).decode("utf-8")
+dsctoken = "TOKEN"
 
 client.run(dsctoken)
