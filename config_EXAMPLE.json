@@ -1,0 +1,6 @@
+{
+    "token": "token",
+    "counting": 1000,
+    "binary_counting": 1000,
+    "_comment1": "Store counting and/or binary_counting as integer (no quotes)."
+}
