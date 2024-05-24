@@ -13,13 +13,19 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 responses = {}
+config_items = [] # format: [token, counting, binary_counting, [download_users]]
 
-async def config(item):
-	idkWhatToNameThis = json.loads(open("config.json".read())[item])
-	if item == "token":
-		if "." not in item:
-			return base64.b64decode(idkWhatToNameThis).decode("utf-8")
-	return idkWhatToNameThis
+try:
+	with open("config.json") as config_file:
+		config_data = json.load(config_file)
+		for item in config_data:
+			config_items.append(config_data[item]) 
+			if item == "token":
+				if isinstance(config_items[0], str) and "." not in config_items[0]: # primitive base64 detect
+					config_items.append(base64.b64decode(config_data[item]).decode("utf-8"))
+					config_items.remove(config_items[0])
+except FileNotFoundError:
+	print("FileNotFoundError: rename config_EXAMPLE.json to config.json")
 
 # a ping command. 
 @tree.command(name = "ping", description = "hopefully counts to a low number :)")
@@ -43,7 +49,6 @@ async def fwef(interaction):
 	badaaa += "\n\n note: users titled \"none\" have since been deleted since they were banned."
 	await interaction.response.send_message(badaaa)
 	print(bans)
-
 
 # nice chat :)
 @tree.command(name = "hello", description = "I would love to talk to you more, but perhaps a simple hello will suffice")
@@ -166,7 +171,6 @@ async def CueRedeem(interaction: discord.Interaction, userid: int):
 			else:
 				await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
 
-
 @tree.context_menu(name="message")
 async def dm(interaction: discord.Interaction, message: discord.Message):
 	"""I should probably remove this lmao"""
@@ -221,12 +225,12 @@ async def on_message(message):
 			return
 	
 	# counting :) (has to be made an if cause then it won't go to binary counting if I just return :<)
-	counting = int(asyncio.run(config("counting")))
+	counting = int(config_items[1])
 	if message.channel.id == counting and counting != 1000: # not sure if int is needed, but eh
 		count_file = open("CurrentCount.txt", "r+")
 		numcount = int(count_file.read())
 		try:
-			if int(message.content) == (numcount):  # Convert numcount to a string for comparison
+			if int(message.content) == (numcount):  # Convert message.content to an integer for comparison
 				numcount += 1
 				count_file.seek(0)
 				count_file.write(str(numcount))
@@ -247,7 +251,7 @@ async def on_message(message):
 			await asyncio.sleep(3)
 			await bomessage.delete()
 	else:
-		bincounting = int(asyncio.run(config("binary_counting")))
+		bincounting = int(config_items[2])
 		if bincounting == None or bincounting == 1000:
 			return
 		count_file_binary = open("CurrentCount-Binary.txt", "r+")
@@ -280,4 +284,4 @@ async def on_message_delete(message):
 
 
 
-client.run(asyncio.run(config("token")))
+client.run(config_items[0])
