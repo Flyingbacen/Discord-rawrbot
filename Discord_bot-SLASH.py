@@ -13,7 +13,18 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 responses = {}
-config_items = [] # format: [token, counting, binary_counting, [download_users]]
+
+try:
+	with open("responses.json") as responses_file:
+		responses = json.load(responses_file)
+except FileNotFoundError:
+	choice = input("responses.json not found, would you like to create a new one? (y/n)\n")
+	if choice.lower() in ["yes", "y"]:
+		with open("responses.json", "w") as responses_file:
+			json.dump({"responses": []}, responses_file)
+	exit(0)
+
+config_items = [] # format: [token, counting, binary_counting]
 
 try:
 	with open("config.json") as config_file:
@@ -24,8 +35,16 @@ try:
 				if isinstance(config_items[0], str) and "." not in config_items[0]: # primitive base64 detect
 					config_items.append(base64.b64decode(config_data[item]).decode("utf-8"))
 					config_items.remove(config_items[0])
+except IndexError:
+	print("Check that there are 3 items in the config.json file")
+	exit()
 except FileNotFoundError:
 	print("FileNotFoundError: rename config_EXAMPLE.json to config.json")
+	choice = input("Would you like to create a placeholder? (y/n)\n")
+	if choice.lower() in ["yes", "y"]:
+		with open("config.json", "w") as config_file:
+			json.dump({"token": "token", "counting": 1000, "binary_counting": 1000}, config_file)
+	exit()
 
 # a ping command. 
 @tree.command(name = "ping", description = "hopefully counts to a low number :)")
@@ -202,6 +221,12 @@ async def on_message(message):
 		response_message = await message.channel.send("Rawr! 🦖")
 		responses[message.id] = response_message.id
 		print("rawr")
+		with open("responses.json", 'r+') as responses_file:
+			data = json.load(responses_file)
+			data['rawr'] = data.get('rawr', []) + [str(response_message.id)] # idk what's going on here
+			responses_file.seek(0)
+			json.dump(data, responses_file)
+			responses_file.truncate()
 
 	# respond to rawr being in a message
 	if "rawr" != message.content.lower() and "rawr" in message.content.lower() and message.author.id != 1118629362368008283:
@@ -225,8 +250,7 @@ async def on_message(message):
 			return
 	
 	# counting :) (has to be made an if cause then it won't go to binary counting if I just return :<)
-	counting = int(config_items[1])
-	if message.channel.id == counting and counting != 1000: # not sure if int is needed, but eh
+	if message.channel.id == config_items[1]:
 		count_file = open("CurrentCount.txt", "r+")
 		numcount = int(count_file.read())
 		try:
@@ -251,8 +275,7 @@ async def on_message(message):
 			await asyncio.sleep(3)
 			await bomessage.delete()
 	else:
-		bincounting = int(config_items[2])
-		if bincounting == None or bincounting == 1000:
+		if message.channel.id != config_items[2]:
 			return
 		count_file_binary = open("CurrentCount-Binary.txt", "r+")
 		numcount_binary = int(count_file_binary.read())
