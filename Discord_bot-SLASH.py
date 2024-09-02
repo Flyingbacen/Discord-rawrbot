@@ -68,7 +68,10 @@ async def fwef(interaction):
         reason = BanEntry.reason
         badaaa += f"User: {user}\nReason: {reason}\n\n"
     badaaa += "\n\n note: users titled \"none\" have since been deleted since they were banned."
-    await interaction.response.send_message(badaaa)
+    if len(badaaa) > 2000:
+        chunks = [badaaa[i:i+2000] for i in range(0, len(badaaa), 2000)]
+        for chunk in chunks:
+            await interaction.response.send_message(chunk)
     print(bans)
 
 # nice chat :)
@@ -223,7 +226,7 @@ async def upload(interaction: discord.Interaction, link: str):
             await asyncio.sleep(1)
 
         
-    message1 = await interaction.followup.send("Downloading file")
+    message1 = await interaction.followup.send("Downloading file", ephemeral=True)
     process = await asyncio.create_subprocess_exec(
         'youtube-dl', link, "--no-part", "-o", "temp.webm",
         stdout=asyncio.subprocess.PIPE,
@@ -245,7 +248,7 @@ async def upload(interaction: discord.Interaction, link: str):
         lock.release()
         return
     if data["format"]["format_name"] != "matroska,webm":
-        message3 = await interaction.followup.send("File is not a webm file, converting")
+        message3 = await interaction.followup.send("File is not a webm file, converting", ephemeral=True)
         process = await asyncio.create_subprocess_exec(
             'ffmpeg', '-i', 'temp.webm', '-c:v', 'libvpx', '-b:v', '1M', '-c:a', 'copy', 'temp.webm',
             stdout=asyncio.subprocess.PIPE,
@@ -254,7 +257,7 @@ async def upload(interaction: discord.Interaction, link: str):
         await process.communicate()
         await interaction.followup.edit_message(message3.id, content="Converted file")
 
-    message2 = await interaction.followup.send("Uploading file")
+    message2 = await interaction.followup.send("Uploading file", ephemeral=True)
     url = "https://sxcu.net/api/files/create"
     async with aiohttp.ClientSession() as session:
         with open("temp.webm", "rb") as file_binary:
