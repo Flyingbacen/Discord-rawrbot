@@ -61,6 +61,7 @@ async def ping(interaction):
 @tree.command(name = "ban_list", description = "returns a list of banned users + reason")
 async def fwef(interaction):
     """gives list of bans in server"""
+    await interaction.response.defer()
     badaaa = " "
     bans = [entry async for entry in interaction.guild.bans()]
     for BanEntry in bans:
@@ -68,10 +69,9 @@ async def fwef(interaction):
         reason = BanEntry.reason
         badaaa += f"User: {user}\nReason: {reason}\n\n"
     badaaa += "\n\n note: users titled \"none\" have since been deleted since they were banned."
-    if len(badaaa) > 2000:
-        chunks = [badaaa[i:i+2000] for i in range(0, len(badaaa), 2000)]
-        for chunk in chunks:
-            await interaction.response.send_message(chunk)
+    await interaction.followup.send(badaaa)
+    if badaaa == " \n\n note: users titled \"none\" have since been deleted since they were banned.":
+        await interaction.followup.send("No people have been banned in this server")
     print(bans)
 
 # nice chat :)
