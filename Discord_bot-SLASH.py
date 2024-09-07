@@ -195,13 +195,6 @@ async def CueRedeem(interaction: discord.Interaction, userid: int):
             else:
                 await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
 
-@tree.context_menu(name="message")
-async def dm(interaction: discord.Interaction, message: discord.Message):
-    """I should probably remove this lmao"""
-    channel = await interaction.user.create_dm()
-    await channel.send("meow >\~<")
-    await interaction.response.send_message(channel.id)
-
 @tree.command(name="upload", description="Uploads a file to sxcu.net and returns the URL")
 @app_commands.user_install()
 @app_commands.allowed_contexts(True, True, True)
