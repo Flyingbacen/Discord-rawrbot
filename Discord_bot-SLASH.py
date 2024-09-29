@@ -7,6 +7,7 @@ import os
 import aiohttp
 import asyncio
 import re
+from translate import Translator
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -195,9 +196,150 @@ async def CueRedeem(interaction: discord.Interaction, userid: int):
             else:
                 await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
 
+
+@tree.command(name="mute", description="Mutes a user")
+@app_commands.describe(voice_channel="The voice channel to (un)mute the user in",
+                       user="The user to (un)mute",
+                       mute="Whether to mute or unmute the user",
+                       time="The time to mute the user for, default is 5, set to 0 to disable. Only used when muting")
+async def remute(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, user: discord.Member, mute: bool, time: int = 5):
+    """Mutes a user"""
+    
+    tempMember = next((e for e in voice_channel.members if e.id == user.id), None)
+    if tempMember is None:
+        await interaction.followup.send(f"{user.display_name} is not in the voice channel")
+        return
+    else:
+        await interaction.response.defer(ephemeral=True)
+        await tempMember.edit(mute=mute)
+        if time != 0 and mute:
+            mutingmessage = await interaction.followup.send(f"{'Muted' if mute else 'Unmuted'} {user.display_name} for {time} seconds")
+            await asyncio.sleep(time)
+            await tempMember.edit(mute=False)
+            await interaction.followup.edit_message(mutingmessage.id, content = f"Unmuted <@{user.id}> after {time} seconds")
+        else:
+            await interaction.followup.send(f"{'Muted' if mute else 'Unmuted'} {user.display_name}")
+
+@tree.command(name="deafen", description="Deafens a user")
+@app_commands.describe(voice_channel="The voice channel to (un)deafen the user in",
+                       user="The user to (un)deafen",
+                       deafen="Whether to deafen or undeafen the user",
+                       time="The time to deafen the user for, default is 5, set to 0 to disable. Only used when deafening")
+async def deafen(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, user: discord.Member, deafen: bool, time: int = 5):
+    """Deafens a user"""
+    await interaction.response.defer(ephemeral=True)
+    
+    tempMember = next((e for e in voice_channel.members if e.id == user.id), None)
+    if tempMember is None:
+        await interaction.followup.send(f"{user.display_name} is not in the voice channel")
+        return
+    else:
+        await tempMember.edit(deafen=deafen)
+        if time != 0 and deafen:
+            deafeningmessage = await interaction.followup.send(f"{'Deafened' if deafen else 'Undeafened'} {user.display_name} for {time} seconds")
+            await asyncio.sleep(time)
+            await tempMember.edit(deafen=False)
+            await interaction.followup.edit_message(deafeningmessage.id, content = f"Undeafened {user.mention} after {time} seconds")
+        else:
+            await interaction.followup.send(f"{'Deafened' if deafen else 'Undeafened'} {user.display_name}")
+
+@tree.command(name="move_single", description="Moves a user to a different voice channel")
+@app_commands.describe(user="The user to move",
+                       voice_channel="The voice channel to move the user to")
+# @discord.app_commands.subcommand_group
+async def move(interaction: discord.Interaction, user: discord.Member, voice_channel: discord.VoiceChannel):
+    """Moves a user to a different voice channel"""
+    await interaction.response.defer(ephemeral=True)
+    if user.voice is None:
+        await interaction.followup.send(f"{user.mention} is not in a voice channel", ephemeral=True)
+    elif user.voice.channel == voice_channel:
+        await interaction.followup.send(f"{user.mention} is already in {voice_channel.mention}", ephemeral=True)
+    else:
+        await user.move_to(voice_channel)
+        await interaction.followup.send(f"Moved {user.mention} to {voice_channel.mention}", ephemeral=True)
+    
+@tree.command(name="move_all", description="Moves all users in a voice channel to a different voice channel")
+@app_commands.describe(voice_channel="The voice channel to move users from",
+                       new_channel="The voice channel to move users to",
+                       lock_channel="Whether to lock the channel while moving users")
+async def move_all(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, new_channel: discord.VoiceChannel, list_users: bool = False, lock_channel: bool = False):
+    """Moves all users in a voice channel to a different voice channel"""
+    if interaction.user.id == 783494134061203526:
+        await interaction.response.send_message("You do not have permission to use this command, Coldyn :3w", ephemeral=True)
+        return
+    if voice_channel == new_channel:
+        await interaction.response.send_message("The voice channels are the same", ephemeral=True)
+        return
+    elif voice_channel.members == []:
+        await interaction.response.send_message("The voice channel is empty", ephemeral=True)
+        return
+    await interaction.response.defer(ephemeral=True)
+    if lock_channel:
+        await voice_channel.set_permissions(voice_channel.guild.default_role, connect=False)
+    if len(voice_channel.members) > 20:
+        await interaction.followup.send("Moving users, please wait", ephemeral=True)
+    if list_users:
+        users = [member.mention for member in voice_channel.members]
+        await interaction.followup.send(f"Moving users: {', '.join(users)}", ephemeral=True)
+    for member in voice_channel.members:
+        await member.move_to(new_channel)
+    await interaction.followup.send(f"Moved {len(voice_channel.members)} user{"" if len(voice_channel.members) == 1 else "s"} to {new_channel.mention}", ephemeral=True)
+    
+
+
+
+"""User app commands"""
+
+async def languages(interaction, current):
+    return [
+        app_commands.Choice(name="English",    value="en"),
+        app_commands.Choice(name="Spanish",    value="es"),
+        app_commands.Choice(name="German",     value="de"),
+        app_commands.Choice(name="Russian",    value="ru"),
+        app_commands.Choice(name="Japanese",   value="ja"),
+        app_commands.Choice(name="Chinese",    value="zh"),
+        app_commands.Choice(name="French",     value="fr"),
+        app_commands.Choice(name="Italian",    value="it"),
+        app_commands.Choice(name="Korean",     value="ko"),
+        app_commands.Choice(name="Portuguese", value="pt"),
+        app_commands.Choice(name="Dutch",      value="nl"),
+        app_commands.Choice(name="Danish",     value="da"),
+        app_commands.Choice(name="Finnish",    value="fi"),
+        app_commands.Choice(name="Greek",      value="el"),
+        app_commands.Choice(name="Arabic",     value="ar"),
+        app_commands.Choice(name="Hebrew",     value="he"),
+        app_commands.Choice(name="Hindi",      value="hi"),
+        app_commands.Choice(name="Indonesian", value="id"),
+        app_commands.Choice(name="Latvian",    value="lv"),
+        app_commands.Choice(name="Lithuanian", value="lt"),
+        app_commands.Choice(name="Malay",      value="ms"),
+        app_commands.Choice(name="Swahili",    value="sw"),
+        app_commands.Choice(name="Tamil",      value="ta"),
+        app_commands.Choice(name="Telugu",     value="te"),
+        app_commands.Choice(name="Urdu",       value="ur")
+    ]
+
+@tree.command(name="translate", description="Translates text to a different language")
+@app_commands.user_install()
+@app_commands.allowed_contexts(True, True, True)
+@app_commands.autocomplete(from_language=languages)
+@app_commands.autocomplete(to_language=languages)
+@app_commands.describe(
+    text="The text to translate",
+    from_language="The language to translate from",
+    to_language="The language to translate to"
+)
+async def Translate(interaction: discord.Interaction, text: str, from_language: str, to_language: str, ephemeral: bool = False):
+    await interaction.response.defer()
+    translator = Translator(from_lang=from_language, to_lang=to_language)
+    translation = translator.translate(text)
+    await interaction.followup.send(translation, ephemeral=True if ephemeral else False)
+
+
 @tree.command(name="upload", description="Uploads a file to sxcu.net and returns the URL")
 @app_commands.user_install()
 @app_commands.allowed_contexts(True, True, True)
+@app_commands.describe(link="The link to the file to upload")
 async def upload(interaction: discord.Interaction, link: str):
     if interaction.user.id != 717471432816459840:
         await interaction.response.send_message("You do not have permission to use this command\nTry </Image:1279220378945720320> instead")
@@ -214,14 +356,15 @@ async def upload(interaction: discord.Interaction, link: str):
 
     await interaction.response.defer()
     if not await lock.acquire():
-        await interaction.followup.send("Another file is being uploaded, waiting for it to finish")
+        await interaction.followup.send("Another file is being uploaded, waiting for it to finish", ephemeral=True)
         while not lock.locked():
             await asyncio.sleep(1)
 
-        
+    if os.path.exists("temp.webm"):
+        os.remove("temp.webm")
     message1 = await interaction.followup.send("Downloading file", ephemeral=True)
     process = await asyncio.create_subprocess_exec(
-        'youtube-dl', link, "--no-part", "-o", "temp.webm",
+        'c:/users/aster/yt-dlp.exe', link, "--no-part", "-o", "temp.webm",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -229,25 +372,39 @@ async def upload(interaction: discord.Interaction, link: str):
     await interaction.followup.edit_message(message1.id, content="Downloaded file")
 
     process = await asyncio.create_subprocess_exec(
-        'ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', 'temp.webm',
+        'c:/windows/ffprobe.exe', '-v', 'quiet', '-print_format', 'json', '-show_format', 'temp.webm',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
+    if not os.path.exists("temp.webm") and not os.path.exists("temp.webm.mp4"):
+        await interaction.followup.send("An error occurred")
+    if os.path.exists("temp.webm.mp4"):
+        os.rename("temp.webm.mp4", "temp.webm")
     stdout, stderr = await process.communicate()
     data = json.loads(stdout)
     if int(data["format"]["size"]) >= 9.5e+7: # 95MB, sxcu limit
-        await interaction.followup.send("File is too large, please select a file smaller than 95MB")
-        os.path.remove("temp.webm")
+        await interaction.followup.send("File is too large, please select a file smaller than 95MB", ephemeral=True)
+        os.remove("temp.webm")
         lock.release()
         return
+    if int(data["format"]["size"]) <= 2.5e+7:
+        await interaction.followup.send("File is smaller than 25MB, uploading directly.", ephemeral=True)
+        print("uploading directly")
+        await interaction.followup.send(file=discord.File("temp.webm"))
+        os.remove("temp.webm")
+        lock.release()
+        return
+
     if data["format"]["format_name"] != "matroska,webm":
         message3 = await interaction.followup.send("File is not a webm file, converting", ephemeral=True)
         process = await asyncio.create_subprocess_exec(
-            'ffmpeg', '-i', 'temp.webm', '-c:v', 'libvpx', '-b:v', '1M', '-c:a', 'copy', 'temp.webm',
+            'c:/windows/ffmpeg.exe', '-i', 'temp.webm', "-y" , '-c:v', 'libvpx', '-c:a', 'copy', 'temp_convert.webm',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         await process.communicate()
+        os.remove("temp.webm")
+        os.rename("temp_convert.webm", "temp.webm")
         await interaction.followup.edit_message(message3.id, content="Converted file")
 
     message2 = await interaction.followup.send("Uploading file", ephemeral=True)
@@ -292,8 +449,8 @@ async def test(interaction: discord.Interaction, file: discord.Attachment):
 @client.event
 async def on_ready():
     await tree.sync()
-    game = discord.Game("with some funny words")
-    await client.change_presence(status=discord.Status.idle, activity=game)
+    activity = discord.Activity(type=discord.ActivityType.listening, name="your commands")
+    await client.change_presence(activity=activity, status=discord.Status.idle)
     print("Ready!")
 
 
@@ -384,8 +541,8 @@ async def on_message(message):
 
 
 # delete the message if the original message to "rawr" is deleted
-@client.event
 
+@client.event
 async def on_message_delete(message):
     """Delete the response message if the original message is deleted."""
     if message.id in responses:
