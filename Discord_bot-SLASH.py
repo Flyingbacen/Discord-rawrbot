@@ -8,7 +8,11 @@ import aiohttp
 import asyncio
 import re
 from translate import Translator
+# from ffmpeg import FFmpeg
+# from ffprobe import FFprobe
+# import yt_dlp
 
+# region startup
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
@@ -35,7 +39,7 @@ try:
         for item in config_data:
             config_items.append(config_data[item]) 
             if item == "token":
-                if isinstance(config_items[0], str) and "." not in config_items[0]: # primitive base64 detect
+                if isinstance(config_items[0], str) and "." not in config_items[0]: # bad base64 detect
                     config_items.append(base64.b64decode(config_data[item]).decode("utf-8"))
                     config_items.remove(config_items[0])
 except IndexError:
@@ -48,9 +52,11 @@ except FileNotFoundError:
         with open("config.json", "w") as config_file:
             json.dump({"token": "token", "counting": 1000, "binary_counting": 1000}, config_file)
     exit()
+# endregion
 
 # a ping command. 
 @tree.command(name = "ping", description = "hopefully counts to a low number :)")
+# region /ping
 async def ping(interaction):
     """Pong! (latency w/ bot)"""
     start_time = time.time()
@@ -58,8 +64,10 @@ async def ping(interaction):
     latency = round((time.time() - start_time) * 1000, 2)
     await interaction.edit_original_response(content=f"Pong!  |  Latency: {latency} ms")
     print(f"A ping command has been sent in {interaction.guild.name} -- {interaction.channel.name}, and the round trip took {latency} ms")
+# endregion
     
 @tree.command(name = "ban_list", description = "returns a list of banned users + reason")
+# region /ban_list
 async def fwef(interaction):
     """gives list of bans in server"""
     await interaction.response.defer()
@@ -74,57 +82,70 @@ async def fwef(interaction):
     if badaaa == " \n\n note: users titled \"none\" have since been deleted since they were banned.":
         await interaction.followup.send("No people have been banned in this server")
     print(bans)
+# endregion
 
 # nice chat :)
 @tree.command(name = "hello", description = "I would love to talk to you more, but perhaps a simple hello will suffice")
+# region /hello
 async def hello(interaction):
     """:D"""
     await interaction.response.send_message(f"Hello {interaction.user.display_name}! I hope you're doing good :)")
     print("hello!")
+# endregion
 
 # pop
 @tree.command(name = "pop", description = "a balloon makes this noise once")
+# region /pop
 async def ballooonpop(interaction):
     """pop :)"""
     await interaction.response.send_message("*pop*\nFun fact, did you know balloons make this noise only once?\n||I bet I can make that noise with you multiple times, *if you know what I mean 🤭*||")
     print(f"Having some fun w/ {interaction.user.name}, hehe")
+# endregion
 
 # invite link
 @tree.command(name = "invite", description = "generate an invite link to let the bot join your server")
+# region /invite
 async def invite(interaction):
     """Generates a bot invite link."""
     embedd = discord.Embed(description = "[invite link](https://discord.com/oauth2/authorize?client_id=1118629362368008283&permissions=2147486720&scope=bot&permissions=2147486720&scope=messages.read%20bot)\n(discord.com)", type = "link")
     await interaction.response.send_message(embed = embedd)
     channel = interaction.channel.name
     print(f"sent bot invite to {channel}")
+# endregion
 
 # random informationn
 @tree.command(name = "info", description = "Some random information about the server you're in.")
+# region /info
 async def information(interaction):
     """Information about the current user."""
     await interaction.response.send_message(f"server -- {interaction.guild.name} ({interaction.guild.id})\nchannel -- {interaction.channel.name} ({interaction.channel.id})\nUser Information --> \n> Display name -- {interaction.user.display_name}\n> Username -- {interaction.user.name}\n> User ID -- {interaction.user.id}\n> Date Created -- {interaction.user.created_at}")
     print(f"{interaction.user.name} has asked for information.")
+# endregion
 
 # current count of counting
 @tree.command(name = "current_count", description = "gives the current count in the counting channel channel.")
+# region /current_count
 async def currentcount(interaction):
     """gives the current count in the counting channel."""
     count_file = open("CurrentCount.txt", "r+")
     numcount = int(count_file.read())
     await interaction.response.send_message(f"the current number is {numcount}", ephemeral = True)
     count_file.close()
+# endregion
 
 # current count of binary counting
 @tree.command(name = "current_count_binary", description = "gives the current count in the binary counting channel.")
+# region /current_count_binary
 async def currentcountbinary(interaction):
     """gives the current count in the binary counting channel."""
     count_file_binary = open("CurrentCount-Binary.txt", "r+")
     numcount_binary = int(count_file_binary.read())
     await interaction.response.send_message(f"the current number is {numcount_binary}", ephemeral = True)
     count_file_binary.close()
-
+# endregion
 
 @tree.command(name="cue_redeem", description="Redeems the currently available free cue piece from 8ballpool.com using your user id (1 for help)")
+# region /cue_redeem
 async def CueRedeem(interaction: discord.Interaction, userid: int):
     """Redeems the cue piece from 8 ball pool's api"""
     if userid == 1:
@@ -195,13 +216,14 @@ async def CueRedeem(interaction: discord.Interaction, userid: int):
                     await interaction.followup.send(f"Error redeeming today's cue piece.\nStatus code:\t{cue_StatusCode}")
             else:
                 await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
-
+# endregion
 
 @tree.command(name="mute", description="Mutes a user")
 @app_commands.describe(voice_channel="The voice channel to (un)mute the user in",
                        user="The user to (un)mute",
                        mute="Whether to mute or unmute the user",
                        time="The time to mute the user for, default is 5, set to 0 to disable. Only used when muting")
+# region /mute
 async def remute(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, user: discord.Member, mute: bool, time: int = 5):
     """Mutes a user"""
     
@@ -219,12 +241,14 @@ async def remute(interaction: discord.Interaction, voice_channel: discord.VoiceC
             await interaction.followup.edit_message(mutingmessage.id, content = f"Unmuted <@{user.id}> after {time} seconds")
         else:
             await interaction.followup.send(f"{'Muted' if mute else 'Unmuted'} {user.display_name}")
+# endregion
 
 @tree.command(name="deafen", description="Deafens a user")
 @app_commands.describe(voice_channel="The voice channel to (un)deafen the user in",
                        user="The user to (un)deafen",
                        deafen="Whether to deafen or undeafen the user",
                        time="The time to deafen the user for, default is 5, set to 0 to disable. Only used when deafening")
+# region /deafen
 async def deafen(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, user: discord.Member, deafen: bool, time: int = 5):
     """Deafens a user"""
     await interaction.response.defer(ephemeral=True)
@@ -242,11 +266,12 @@ async def deafen(interaction: discord.Interaction, voice_channel: discord.VoiceC
             await interaction.followup.edit_message(deafeningmessage.id, content = f"Undeafened {user.mention} after {time} seconds")
         else:
             await interaction.followup.send(f"{'Deafened' if deafen else 'Undeafened'} {user.display_name}")
+# endregion
 
 @tree.command(name="move_single", description="Moves a user to a different voice channel")
 @app_commands.describe(user="The user to move",
                        voice_channel="The voice channel to move the user to")
-# @discord.app_commands.subcommand_group
+# region /move_single
 async def move(interaction: discord.Interaction, user: discord.Member, voice_channel: discord.VoiceChannel):
     """Moves a user to a different voice channel"""
     await interaction.response.defer(ephemeral=True)
@@ -257,11 +282,13 @@ async def move(interaction: discord.Interaction, user: discord.Member, voice_cha
     else:
         await user.move_to(voice_channel)
         await interaction.followup.send(f"Moved {user.mention} to {voice_channel.mention}", ephemeral=True)
-    
+# endregion
+
 @tree.command(name="move_all", description="Moves all users in a voice channel to a different voice channel")
 @app_commands.describe(voice_channel="The voice channel to move users from",
                        new_channel="The voice channel to move users to",
                        lock_channel="Whether to lock the channel while moving users")
+# region /move_all
 async def move_all(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, new_channel: discord.VoiceChannel, list_users: bool = False, lock_channel: bool = False):
     """Moves all users in a voice channel to a different voice channel"""
     if interaction.user.id == 783494134061203526:
@@ -284,7 +311,7 @@ async def move_all(interaction: discord.Interaction, voice_channel: discord.Voic
     for member in voice_channel.members:
         await member.move_to(new_channel)
     await interaction.followup.send(f"Moved {len(voice_channel.members)} user{"" if len(voice_channel.members) == 1 else "s"} to {new_channel.mention}", ephemeral=True)
-    
+# endregion
 
 
 
@@ -329,17 +356,19 @@ async def languages(interaction, current):
     from_language="The language to translate from",
     to_language="The language to translate to"
 )
+# region /translate
 async def Translate(interaction: discord.Interaction, text: str, from_language: str, to_language: str, ephemeral: bool = False):
     await interaction.response.defer()
     translator = Translator(from_lang=from_language, to_lang=to_language)
     translation = translator.translate(text)
     await interaction.followup.send(translation, ephemeral=True if ephemeral else False)
-
+# endregion
 
 @tree.command(name="upload", description="Uploads a file to sxcu.net and returns the URL")
 @app_commands.user_install()
 @app_commands.allowed_contexts(True, True, True)
 @app_commands.describe(link="The link to the file to upload")
+# region /upload
 async def upload(interaction: discord.Interaction, link: str):
     if interaction.user.id != 717471432816459840:
         await interaction.response.send_message("You do not have permission to use this command\nTry </Image:1279220378945720320> instead")
@@ -351,17 +380,62 @@ async def upload(interaction: discord.Interaction, link: str):
              "{2,6}\\b([-a-zA-Z0-9@:%" +
              "._\\+~#?&//=]*)")
     if not re.search(regex, link):
-        await interaction.response.send_message("Invalid link")
+        await interaction.response.send_message("Invalid link", ephemeral=True)
         return
-
-    await interaction.response.defer()
-    if not await lock.acquire():
-        await interaction.followup.send("Another file is being uploaded, waiting for it to finish", ephemeral=True)
-        while not lock.locked():
-            await asyncio.sleep(1)
 
     if os.path.exists("temp.webm"):
         os.remove("temp.webm")
+
+    """ydl_opts = { 
+        'quiet': True,
+    }
+    ydl = yt_dlp.YoutubeDL(ydl_opts)
+    metadata = ydl.extract_info([link])
+    file_size = metadata["requested_formats"][0]["filesize"]
+    if file_size >= 9.5e+7:
+        await interaction.followup.send("File is too large, please select a file smaller than 95MB", ephemeral=True)
+        lock.release()
+        return
+        filename = metadata["title"] + ".webm"
+    elif file_size >= 2.5e+7 and file_size <= 9.5e+7:
+        uploading = await interaction.followup.send("Uploading file", ephemeral=True)
+        url = "https://sxcu.net/api/files/create"
+        async with aiohttp.ClientSession() as session: # upload the file to sxcu
+            with open("metadata", "rb") as file_binary:
+                file_data = file_binary.read()
+            data = aiohttp.FormData()
+            data.add_field('file', file_data, filename=link.split('/')[-1])
+            async with session.post(
+                url,
+                headers={
+                    "User-Agent": "Uploader",
+                    "token": "03667999-fec2-4afb-8bf2-792c4444ee8d"
+                },
+                data=data
+            ) as response:
+                response_data = await response.json()
+        
+        url = f"https://sxcu.net/api/files/{response_data['id']}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                url,
+                headers={
+                    "User-Agent": "Uploader"
+                }
+            ) as response:
+                response_info = await response.json()
+        await interaction.followup.edit_message(uploading.id, content = "Uploaded")
+        return
+    elif file_size <= 2.5e+7:
+        await interaction.followup.send("File is smaller than 25MB, uploading directly.", ephemeral=True)
+        ydl.download([link])
+        os.remove("temp.webm")
+        lock.release()
+        return """
+    
+    lock.acquire()
+    await interaction.response.defer(ephemeral=True)
+    # region download file
     message1 = await interaction.followup.send("Downloading file", ephemeral=True)
     process = await asyncio.create_subprocess_exec(
         'c:/users/aster/yt-dlp.exe', link, "--no-part", "-o", "temp.webm",
@@ -370,31 +444,42 @@ async def upload(interaction: discord.Interaction, link: str):
     )
     await process.communicate()    
     await interaction.followup.edit_message(message1.id, content="Downloaded file")
-
+    # endregion
+    # region get file info
     process = await asyncio.create_subprocess_exec(
         'c:/windows/ffprobe.exe', '-v', 'quiet', '-print_format', 'json', '-show_format', 'temp.webm',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
+    stdout, stderr = await process.communicate()
+    exit_code = await process.wait()
+    if exit_code != 0:
+        await interaction.followup.send("An error occurred\n\n```\n" + stderr.decode() + "\n```\n\n```" + stdout.decode() + "```")
+        lock.release()
+        return
     if not os.path.exists("temp.webm") and not os.path.exists("temp.webm.mp4"):
         await interaction.followup.send("An error occurred")
     if os.path.exists("temp.webm.mp4"):
         os.rename("temp.webm.mp4", "temp.webm")
     stdout, stderr = await process.communicate()
     data = json.loads(stdout)
+    # endregion
     if int(data["format"]["size"]) >= 9.5e+7: # 95MB, sxcu limit
         await interaction.followup.send("File is too large, please select a file smaller than 95MB", ephemeral=True)
         os.remove("temp.webm")
         lock.release()
         return
+    # region upload file - Discord
     if int(data["format"]["size"]) <= 2.5e+7:
         await interaction.followup.send("File is smaller than 25MB, uploading directly.", ephemeral=True)
         print("uploading directly")
-        await interaction.followup.send(file=discord.File("temp.webm"))
+        await interaction.channel.send(file=discord.File("temp.webm"))
         os.remove("temp.webm")
         lock.release()
         return
+        # endregion
 
+    # region upload file - sxcu
     if data["format"]["format_name"] != "matroska,webm":
         message3 = await interaction.followup.send("File is not a webm file, converting", ephemeral=True)
         process = await asyncio.create_subprocess_exec(
@@ -409,7 +494,7 @@ async def upload(interaction: discord.Interaction, link: str):
 
     message2 = await interaction.followup.send("Uploading file", ephemeral=True)
     url = "https://sxcu.net/api/files/create"
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession() as session: # upload the file to sxcu
         with open("temp.webm", "rb") as file_binary:
             file_data = file_binary.read()
         data = aiohttp.FormData()
@@ -434,9 +519,11 @@ async def upload(interaction: discord.Interaction, link: str):
         ) as response:
             response_info = await response.json()
     await interaction.followup.edit_message(message2.id, content = "Uploaded")
+    # endregion
     await interaction.followup.send(response_info["url"])
     os.remove("temp.webm")
     lock.release()
+# endregion
 
 @tree.command(name="test", description="test command")
 @app_commands.user_install()
@@ -496,6 +583,19 @@ async def on_message(message):
         elif await message.channel.send(f">{quotemessage[1]}"):
             print(f"imma boutta say {quotemessage[1]}")
             return
+    
+    if message.content == "$~stop":
+        if message.author.id != 717471432816459840: return
+        await message.channel.send("Stopping the bot")
+        await client.close()
+        print("Stopping the bot")
+    
+    if message.content == "$~restart":
+        if message.author.id != 717471432816459840: return
+        await message.channel.send("Restarting the bot")
+        await client.close()
+        os.system("start cmd /k python Discord_bot-SLASH.py")
+        exit(0)
     
     # counting :) (has to be made an if cause then it won't go to binary counting if I just return :<)
     if message.channel.id == config_items[1]:
