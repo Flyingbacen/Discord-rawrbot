@@ -1,5 +1,6 @@
-config.json
-*backup*
-*.pyw
-CurrentCount*
-responses.json
+*
+!config_EXAMPLE.json
+!CurrentCount*(*).txt
+!Discord_bot-SLASH.py
+!README.md
+!requirements.txt
