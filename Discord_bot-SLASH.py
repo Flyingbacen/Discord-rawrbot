@@ -9,6 +9,8 @@ import asyncio
 import re
 from translate import Translator
 import glob
+import enum
+import urllib.parse
 import ffmpeg
 # import ffprobe
 import yt_dlp
@@ -88,6 +90,8 @@ async def fwef(interaction):
 
 # nice chat :)
 @tree.command(name = "hello", description = "I would love to talk to you more, but perhaps a simple hello will suffice")
+@app_commands.allowed_contexts(True, True, True)
+@app_commands.allowed_installs(True, True)
 # region /hello
 async def hello(interaction):
     """:D"""
@@ -321,31 +325,31 @@ async def move_all(interaction: discord.Interaction, voice_channel: discord.Voic
 
 async def languages(interaction, current):
     return [
-        app_commands.Choice(name="English",    value="en"),
-        app_commands.Choice(name="Spanish",    value="es"),
-        app_commands.Choice(name="German",     value="de"),
-        app_commands.Choice(name="Russian",    value="ru"),
-        app_commands.Choice(name="Japanese",     value="ja"),
-        app_commands.Choice(name="Chinese",    value="zh"),
-        app_commands.Choice(name="French",     value="fr"),
-        app_commands.Choice(name="Italian",    value="it"),
-        app_commands.Choice(name="Korean",     value="ko"),
+        app_commands.Choice(name="English", value="en"),
+        app_commands.Choice(name="Spanish", value="es"),
+        app_commands.Choice(name="German", value="de"),
+        app_commands.Choice(name="Russian", value="ru"),
+        app_commands.Choice(name="Japanese", value="ja"),
+        app_commands.Choice(name="Chinese", value="zh"),
+        app_commands.Choice(name="French", value="fr"),
+        app_commands.Choice(name="Italian", value="it"),
+        app_commands.Choice(name="Korean", value="ko"),
         app_commands.Choice(name="Portuguese", value="pt"),
-        app_commands.Choice(name="Dutch",        value="nl"),
-        app_commands.Choice(name="Danish",     value="da"),
-        app_commands.Choice(name="Finnish",    value="fi"),
-        app_commands.Choice(name="Greek",        value="el"),
-        app_commands.Choice(name="Arabic",     value="ar"),
-        app_commands.Choice(name="Hebrew",     value="he"),
-        app_commands.Choice(name="Hindi",        value="hi"),
+        app_commands.Choice(name="Dutch", value="nl"),
+        app_commands.Choice(name="Danish", value="da"),
+        app_commands.Choice(name="Finnish", value="fi"),
+        app_commands.Choice(name="Greek", value="el"),
+        app_commands.Choice(name="Arabic", value="ar"),
+        app_commands.Choice(name="Hebrew", value="he"),
+        app_commands.Choice(name="Hindi", value="hi"),
         app_commands.Choice(name="Indonesian", value="id"),
-        app_commands.Choice(name="Latvian",    value="lv"),
+        app_commands.Choice(name="Latvian", value="lv"),
         app_commands.Choice(name="Lithuanian", value="lt"),
-        app_commands.Choice(name="Malay",        value="ms"),
-        app_commands.Choice(name="Swahili",    value="sw"),
-        app_commands.Choice(name="Tamil",        value="ta"),
-        app_commands.Choice(name="Telugu",     value="te"),
-        app_commands.Choice(name="Urdu",         value="ur")
+        app_commands.Choice(name="Malay", value="ms"),
+        app_commands.Choice(name="Swahili", value="sw"),
+        app_commands.Choice(name="Tamil", value="ta"),
+        app_commands.Choice(name="Telugu", value="te"),
+        app_commands.Choice(name="Urdu", value="ur")
     ]
 
 @tree.command(name="translate", description="Translates text to a different language")
@@ -375,13 +379,16 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
     if interaction.user.id != 717471432816459840:
         await interaction.response.send_message("You do not have permission to use this command. Wait for some other time.\nTry </Image:1279220378945720320> instead")
         return
+    skip = False
+    if link.lower().startswith("c:"):
+        skip = True
 
     regex = re.compile("((http|https)://)(www\\.)?" +
              "[a-zA-Z0-9@:%._\\+~#?&//=]" +
              "{2,256}\\.[a-z]" +
              "{2,6}\\b([-a-zA-Z0-9@:%" +
              "._\\+~#?&//=]*)")
-    if not re.search(regex, link):
+    if not re.search(regex, link) and not skip:
         await interaction.response.send_message("Invalid link", ephemeral=True)
         return
 
@@ -502,24 +509,28 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
     await lock.acquire()
     await interaction.response.defer(ephemeral=True)
     # region download file
-    message1 = await interaction.followup.send("Downloading file", ephemeral=True)
-    process = await asyncio.create_subprocess_exec(
-        'c:/users/aster/yt-dlp.exe', link, "--no-part", "-o", "temp.webm",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    await process.communicate()    
-    await interaction.followup.edit_message(message1.id, content="Downloaded file")
+    if not skip:
+        message1 = await interaction.followup.send("Downloading file", ephemeral=True)
+        process = await asyncio.create_subprocess_exec(
+            'c:/users/aster/yt-dlp.exe', link, "--no-part", "-o", "temp.webm",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await process.communicate()    
+        await interaction.followup.edit_message(message1.id, content="Downloaded file")
     # endregion
 
     try:
-        file = glob.glob("temp.webm*")[0]
+        file = glob.glob("temp.*")[0]
         # await interaction.followup.send(glob.glob("temp.webm*"))
         # return
     except IndexError:
-        await interaction.followup.send("An error occurred: Could not find the file", ephemeral=True)
-        lock.release()
-        return
+        if skip:
+            file = link
+        else:
+            await interaction.followup.send("An error occurred: Could not find the file", ephemeral=True)
+            lock.release()
+            return
 
 
     # region get file info
@@ -533,12 +544,12 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
     # endregion
     if int(data["format"]["size"]) >= 9.5e+7: # 95MB, sxcu limit
         await interaction.followup.send("File is too large, please select a file smaller than 95MB", ephemeral=True)
-        os.remove(file)
+        if not skip: os.remove(file)
         lock.release()
         return
     # region upload file - Discord
-    if int(data["format"]["size"]) <= 2.5e+7:
-        await interaction.followup.send("File is smaller than 25MB, uploading directly.", ephemeral=True)
+    if int(data["format"]["size"]) <= 1.0e+7:
+        await interaction.followup.send("File is smaller than 10MB, uploading directly.", ephemeral=True)
         print("uploading directly")
         if interaction.channel.id == 1278161126860787837:
             async with aiohttp.ClientSession() as session:
@@ -546,7 +557,7 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
                 await messagewebhook.send(optional_message, file=discord.File(file), username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
         else:
             await interaction.followup.send(optional_message, file=discord.File(file), username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
-        os.remove("temp.webm")
+        if not skip: os.remove(file)
         lock.release()
         return
     # endregion
@@ -561,8 +572,11 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
         )
         await process.wait()
         await process.communicate()
-        os.remove(file)
-        os.rename(file + 'temp_convert.webm', file)
+        if not skip: 
+            os.remove(file)
+            os.rename(file + 'temp_convert.webm', file)
+        else: 
+            file = file + 'temp_convert.webm'
         await interaction.followup.edit_message(message3.id, content="Converted file")
 
     message2 = await interaction.followup.send("Uploading file", ephemeral=True)
@@ -586,9 +600,7 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
     async with aiohttp.ClientSession() as session:
         async with session.get(
             url,
-            headers={
-                "User-Agent": "Uploader"
-            }
+            headers={"User-Agent": "Uploader"} # SXCU requires a user agent
         ) as response:
             response_info = await response.json()
     await interaction.followup.edit_message(message2.id, content = "Uploaded")
@@ -611,6 +623,7 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
 @tree.command(name="playinaudiochannel", description="Plays audio in a voice channel, downloaded with yt-dlp")
 @app_commands.allowed_contexts(True, False, False)
 @app_commands.describe(link="The link to the audio to play", channel="The voice channel to play the audio in")
+# region /playinaudiochannel
 async def playinaudiochannel(interaction: discord.Interaction, link: str, channel: discord.VoiceChannel):
     if interaction.user.id != 717471432816459840:
         await interaction.response.send_message("You do not have permission to use this command. Wait for some other time.")
@@ -639,13 +652,75 @@ async def playinaudiochannel(interaction: discord.Interaction, link: str, channe
     await voice_client.disconnect()
     os.remove(file)
     await interaction.followup.send("Finished playing audio", ephemeral=True)
+# endregion
 
 @tree.command(name="test", description="test command")
 @app_commands.user_install()
 @app_commands.allowed_contexts(False, True, True)
+# region /test
 async def test(interaction: discord.Interaction, file: discord.Attachment):
     file = await file.to_file()
     await interaction.response.send_message(file=file)
+# endregion
+
+class musicStreamingServices(enum.Enum):
+    all = "all"
+    Amazon_Music = "amazonMusic"
+    Amazon_Store = "amazonStore"
+    Anghami = "anghami"
+    Apple_Music = "appleMusic"
+    Audiomack = "audiomack"
+    Audius = "audius"
+    Boomplay = "boomplay"
+    Deezer = "deezer"
+    Google = "google"
+    Google_Store = "googleStore"
+    iTunes = "itunes"
+    Napster = "napster"
+    Pandora = "pandora"
+    Soundcloud = "soundcloud"
+    Spinrilla = "spinrilla"
+    Spotify = "spotify"
+    Tidal = "tidal"
+    Yandex = "yandex"
+    Youtube = "youtube"
+    Youtube_Music = "youtubeMusic"
+
+@tree.command(name="universalsonglink", description="Converts a song link to a universal link")
+@app_commands.allowed_installs(True, True)
+@app_commands.allowed_contexts(True, True, True)
+@app_commands.describe(link="The link to the song", converttoplatform="The platform to convert the link to. Use 'all' to get links for all platforms", single="Use if the album is a single. Default is False")
+# region /universalsonglink
+async def universalsonglink(interaction: discord.Interaction, link: str, converttoplatform: musicStreamingServices, single: bool = False):
+    await interaction.response.defer()
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.song.link/v1-alpha.1/links?url={urllib.parse.quote(link)}?songIfSingle={str(single).lower()}") as response:
+            data = await response.json()
+    try:
+        if data["statusCode"] == 400:
+            await interaction.followup.send("Invalid link. Profile links are not supported by song.link.", ephemeral=True)
+            return
+    except KeyError:
+        pass
+    SongID = data["entityUniqueId"]
+    song = data["entitiesByUniqueId"][SongID]["title"]
+    artist = data["entitiesByUniqueId"][SongID]["artistName"]
+
+    if converttoplatform == musicStreamingServices.all:
+        interaction.followup.send(f"all music players for {song} by {artist}: {data["pageUrl"]}")
+        return
+    else:
+        selected_platform = converttoplatform.value
+        try:
+            song_url = data["linksByPlatform"][selected_platform]["url"]
+        except KeyError:
+            await interaction.followup.send(f"Could not find a link for {selected_platform.capitalize()}, defaulting to all platforms:\n*{song}* by {artist}: {data["pageUrl"]}")
+            return
+        await interaction.followup.send(f"*{song}* by {artist}:\n{song_url}")
+# endregion
+
+
 
 # get the slash commands ready, and set the status
 @client.event
