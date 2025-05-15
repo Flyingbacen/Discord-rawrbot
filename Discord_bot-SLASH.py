@@ -498,11 +498,9 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
   if link.lower().startswith("c:"):
     skip = True
 
-  regex = re.compile("((http|https)://)(www\\.)?" +
-       "[a-zA-Z0-9@:%._\\+~#?&//=]" +
-       "{2,256}\\.[a-z]" +
-       "{2,6}\\b([-a-zA-Z0-9@:%" +
-       "._\\+~#?&//=]*)")
+  regex = re.compile(
+    r"((http|https):\/\/)(www\.)?([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,6}(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?"
+  )
   if not re.search(regex, link) and not skip:
     await interaction.response.send_message("Invalid link", ephemeral=True)
     return
