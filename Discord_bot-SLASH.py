@@ -13,7 +13,9 @@ import enum
 import urllib.parse
 import ffmpeg
 # import ffprobe
-import yt_dlp
+# import yt_dlp
+import random
+import datetime
 
 # region startup
 intents = discord.Intents.default()
@@ -66,120 +68,6 @@ async def ping(interaction):
   latency = round((time.time() - start_time) * 1000, 2)
   await interaction.edit_original_response(content=f"Pong! | Latency: {round(interaction.client.latency * 1000, 2)} ms | Message Latency: {latency} ms")
 # endregion
-
-
-@tree.command(name = "better_upload")
-@app_commands.user_install()
-@app_commands.allowed_contexts(True, True, True)
-@app_commands.describe(link="The link to the file to upload")
-# region /better_upload
-async def better_upload(interaction, link: str):
-  """Uploads a file to sxcu.net and returns the URL"""
-  if interaction.user.id != 717471432816459840:
-    await interaction.response.send_message("You do not have permission to use this command. Wait for some other time.")
-    return
-  if not link.lower().startswith(("c:", "http://", "https://", "www")):
-    await interaction.response.send_message("Invalid link", ephemeral=True)
-    return
-  await interaction.response.defer(ephemeral=True)
-
-  async def readstdout(stdout: asyncio.StreamReader):
-    data = await stdout.read(-1)
-    return data.decode()
-
-  # download file
-  process = await asyncio.create_subprocess_exec(
-    'c:/users/aster/yt-dlp.exe', link, "--no-part", "-f", "bv*[ext=webm][height<=480]+ba[ext=webm]/b[ext=webm][height<=480]", "--max-filesize", "90M", "-o", "temp.webm",
-    stdout=asyncio.subprocess.PIPE,
-    stderr=asyncio.subprocess.PIPE
-  )
-  await process.communicate()
-
-  # make button
-  class YesNoView(discord.ui.View):
-      def __init__(self):
-          super().__init__(timeout=None)
-          self.value = None
-
-      @discord.ui.button(label="Yes", style=discord.ButtonStyle.success)
-      async def yes_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-          self.value = True
-          self.stop()
-
-      @discord.ui.button(label="No", style=discord.ButtonStyle.danger)
-      async def no_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-          self.value = False
-          self.stop()
-
-  stdout = await readstdout(process.stdout)
-  if "file is larger than max-filesize" in stdout.lower():
-    await interaction.followup.send("File is too large", ephemeral=True)
-    return
-  else:
-    await interaction.followup.send("An error occurred: Could not download the file\nWould you like to try to download without WebM?", ephemeral=True, view=(view := YesNoView()))
-    await view.wait()
-
-    if view.value:
-      process = await asyncio.create_subprocess_exec(
-        'c:/users/aster/yt-dlp.exe', link, "--no-part", "-o", "--max-filesize", "10M", "temp.mp4",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-      )
-      await process.communicate()
-      if process.returncode != 0:
-        stdout = await readstdout(process.stdout)
-        await interaction.followup.send("An error occurred: Could not download the file" + ("\nFile is larger than max-filesize (10M)" if "[download] File is larger than max-filesize" in stdout else ""), ephemeral=True)
-        return
-    elif not view.value:
-      await interaction.followup.send("Download cancelled", ephemeral=True)
-      return
-  
-  # upload file
-  file = glob.glob("temp.*")[0]
-  if 1.0e+7 <= os.path.getsize(file) <= 9.5e+7:
-    sxcuUpload = True
-  elif os.path.getsize(file) <= 1.0e+7:
-    sxcuUpload = False
-    
-  if sxcuUpload:
-    url = "https://sxcu.net/api/files/create"
-    async with aiohttp.ClientSession() as session: # upload the file to sxcu
-      with open(file, "rb") as file_binary:
-        file_data = file_binary.read()
-      data = aiohttp.FormData()
-      data.add_field('file', file_data, filename=link.split('/')[-1])
-      async with session.post(
-        url,
-        headers={
-          "User-Agent": "Uploader",
-        }
-      ) as response:
-        response_data = await response.json()
-    
-    url = f"https://sxcu.net/api/files/{response_data['id']}"
-    async with aiohttp.ClientSession() as session:
-      async with session.get(
-        url,
-        headers={"User-Agent": "Uploader"}
-      ) as response:
-        response_info = await response.json()
-    await interaction.followup.send(response_info["url"])
-
-
-@discord.app_commands.allowed_installs(True, True)
-@discord.app_commands.allowed_contexts(True, True, True)
-@tree.command(name="songstatus", description="Must be in a server with the bot")
-async def test(interaction: discord.Interaction):
-  # await discord.Guild(854027342040662016).get_member()
-  await interaction.response.defer(ephemeral=True)
-  members=[]
-  for member in client.get_all_members():
-    members.append(member)
-    if interaction.user.id == member.id:
-      await interaction.followup.send(f"Your status is {member.activities}", ephemeral=True)
-  await interaction.followup.send("\n".join([str(member) for member in members]), ephemeral=True)
-
-      
 
   
     
@@ -675,60 +563,21 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
     return
   # endregion
 
-  # region upload file - sxcu
-  if data["format"]["format_name"] != "matroska,webm":
-    message3 = await interaction.followup.send("File is not a webm file, converting", ephemeral=True)
-    process = await asyncio.create_subprocess_exec(
-      'c:/windows/ffmpeg.exe', '-i', file, "-y" , '-c:v', 'libvpx', '-c:a', 'libopus', file + 'temp_convert.webm',
-      stdout=asyncio.subprocess.PIPE,
-      stderr=asyncio.subprocess.PIPE
-    )
-    await process.wait()
-    await process.communicate()
-    if not skip: 
-      os.remove(file)
-      os.rename(file + 'temp_convert.webm', file)
-    else: 
-      file = file + 'temp_convert.webm'
-    await interaction.followup.edit_message(message3.id, content="Converted file")
-
-  message2 = await interaction.followup.send("Uploading file", ephemeral=True)
-  url = "https://sxcu.net/api/files/create"
-  async with aiohttp.ClientSession() as session: # upload the file to sxcu
-    with open(file, "rb") as file_binary:
-      file_data = file_binary.read()
-    data = aiohttp.FormData()
-    data.add_field('file', file_data, filename=link.split('/')[-1])
-    async with session.post(
-      url,
-      headers={
-        "User-Agent": "Uploader",
-        "token": "03667999-fec2-4afb-8bf2-792c4444ee8d"
-      },
-      data=data
-    ) as response:
-      response_data = await response.json()
-    
-  url = f"https://sxcu.net/api/files/{response_data['id']}"
+  # region upload file - catbox
+  await interaction.followup.send("Uploading file to catbox", ephemeral=True)
+  url = "https://catbox.moe/user/api.php"
   async with aiohttp.ClientSession() as session:
-    async with session.get(
-      url,
-      headers={"User-Agent": "Uploader"} # SXCU requires a user agent
-    ) as response:
-      response_info = await response.json()
-  await interaction.followup.edit_message(message2.id, content = "Uploaded")
-  # endregion
-  await interaction.followup.send(response_info["url"], username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
-  if interaction.channel.id == 1278161126860787837:
-    async with aiohttp.ClientSession() as session:
-      messagewebhook = discord.Webhook.from_url(webhook, session=session)
-      if optional_message != "":
-        await messagewebhook.send(optional_message, username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
-      await messagewebhook.send(response_info["url"], username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
-      # two seperate messages to avoid the link being shown
-  else:
-    interaction.followup.send(optional_message, username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
-    interaction.followup.send(response_info["url"], username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
+      with open(file, "rb") as file_binary:
+        data = aiohttp.FormData()
+        data.add_field('reqtype', 'fileupload')
+        data.add_field('fileToUpload', file_binary, filename=os.path.basename(file))
+        async with session.post(
+          url,
+          data=data
+        ) as response:
+          response_data = await response.text()
+
+  await interaction.followup.send(response_data, username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
   os.remove(file)
   lock.release()
 # endregion
@@ -899,6 +748,105 @@ async def universalsonglinkfromstatus(interaction: discord.Interaction, songname
       return
     await interaction.followup.send(f"*{song}* by {artist}:\n{song_url}")
 
+
+# @tree.command(name="raendom_image", description="Sends a random image from channel history")
+# @app_commands.allowed_contexts(True, False, False)
+# async def random_image(interaction: discord.Interaction):
+#   await interaction.response.defer()
+#   guild = interaction.guild
+#   images = []
+#   async def fetch_images():
+#     messagetime = None
+#     while True:
+#       async for msg in channel.history(limit=100, before=None if not images else messagetime):
+#         if msg.attachments:
+#           images.append(msg)
+#           messagetime = msg.created_at
+#   for channel in guild.text_channels:
+#     try:
+#       print(f"Checking channel: {channel.name}")
+#       await asyncio.wait_for(fetch_images(), timeout=10)
+#     except discord.Forbidden:
+#       continue  # Skip channels where the bot doesn't have permission to read history
+#     except asyncio.TimeoutError:
+#       print(f"Timeout while fetching images from {channel.name}")
+#       continue
+#   if images:
+#     random_image = random.choice(images)
+#     await interaction.followup.send(random_image.attachments[0].url)
+#     return
+
+
+@tree.command(name="random_image", description="Sends a random image from channel history")
+@app_commands.allowed_contexts(True, False, False)
+async def random_image(interaction: discord.Interaction, channel: discord.TextChannel = None):
+  await interaction.response.defer()
+  guild = interaction.guild
+  images = []
+
+  async def fetch_images(channel):
+    messagetime = None
+    while True:
+      found = False
+      async for msg in channel.history(limit=100, before=messagetime):
+        if msg.attachments:
+          for attachment in msg.attachments:
+            if attachment.content_type and attachment.content_type.startswith("image"):
+              # Save both the message and the attachment URL
+              images.append({"message_url": msg.jump_url, "attachment_url": attachment.url})
+              found = True
+        messagetime = msg.created_at
+      if not found:
+        break
+
+  if channel is None:
+    for channel in guild.text_channels:
+      try:
+        print(f"Checking channel: {channel.name}")
+        await asyncio.wait_for(fetch_images(channel), timeout=10)
+      except discord.Forbidden:
+        continue  # Skip channels where the bot doesn't have permission to read history
+      except asyncio.TimeoutError:
+        print(f"Timeout while fetching images from {channel.name}")
+        continue
+  else:
+    try:
+      print(f"Checking channel: {channel.name}")
+      await asyncio.wait_for(fetch_images(channel), timeout=20)
+    except discord.Forbidden:
+        await interaction.followup.send("I don't have permission to read messages in that channel.", ephemeral=True)
+        return
+    except asyncio.TimeoutError:
+      pass
+
+  if images:
+    random_image = random.choice(images)
+    # await interaction.followup.send(random_image["attachment_url"])
+    await interaction.followup.send(f"[Jump to message]({random_image['message_url']}) [.]({random_image['attachment_url']})")
+  else:
+    await interaction.followup.send("No images found in channel history.", ephemeral=True)
+
+@tree.command(name="timeout", description="Times out a user for a specified duration")
+@app_commands.describe(user="The user to timeout", duration="The duration of the timeout in seconds")
+@app_commands.allowed_contexts(True, False, False)
+async def timeout(interaction: discord.Interaction, user: discord.Member, duration: int = 60):
+  """Times out a user for a specified duration"""
+  if interaction.user.id != 717471432816459840:
+    await interaction.response.send_message("You do not have permission to use this command. Wait for some other time.")
+    return
+  if duration < 1 or duration > 2419200:  # 28 days in seconds
+    await interaction.response.send_message("Duration must be between 1 second and 28 days (2419200 seconds).", ephemeral=True)
+    return
+  await interaction.response.defer(ephemeral=True)
+  
+  try:
+    await user.timeout(discord.utils.utcnow() + datetime.timedelta(seconds=duration))
+    await interaction.followup.send(f"Timed out {user.display_name} for {duration} seconds.", ephemeral=True)
+  except discord.Forbidden:
+    await interaction.followup.send("I do not have permission to timeout this user.", ephemeral=True)
+  except discord.HTTPException as e:
+    await interaction.followup.send(f"An error occurred while trying to timeout the user: {e}", ephemeral=True)
+
 # get the slash commands ready, and set the status
 @client.event
 async def on_ready():
@@ -908,7 +856,7 @@ async def on_ready():
   print("Ready!")
 
 
-### NON-SLASH COMMANDS/REPLIES
+#region NON-SLASH COMMANDS/REPLIES
 
 # respond to rawr
 @client.event
