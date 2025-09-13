@@ -102,7 +102,7 @@ async def hello(interaction):
 # endregion
 
 # pop
-@tree.command(name = "pop", description = "a balloon makes this noise once")
+@tree.command(name = "pop", description = "goes the weasel!")
 # region /pop
 async def ballooonpop(interaction):
   """pop :)"""
@@ -111,7 +111,7 @@ async def ballooonpop(interaction):
 # endregion
 
 # invite link
-@tree.command(name = "invite", description = "generate an invite link to let the bot join your server")
+@tree.command(name = "invite", description = "generate an invite link to let the bot join your server (permissions not up to date)")
 # region /invite
 async def invite(interaction):
   """Generates a bot invite link."""
@@ -131,7 +131,7 @@ async def information(interaction):
 # endregion
 
 # current count of counting
-@tree.command(name = "current_count", description = "gives the current count in the counting channel channel.")
+@tree.command(name = "current_count", description = "gives the current count in the counting channel channel. (don't use)")
 # region /current_count
 async def currentcount(interaction):
   """gives the current count in the counting channel."""
@@ -142,7 +142,7 @@ async def currentcount(interaction):
 # endregion
 
 # current count of binary counting
-@tree.command(name = "current_count_binary", description = "gives the current count in the binary counting channel.")
+@tree.command(name = "current_count_binary", description = "gives the current count in the binary counting channel. (don't use)")
 # region /current_count_binary
 async def currentcountbinary(interaction):
   """gives the current count in the binary counting channel."""
@@ -152,7 +152,7 @@ async def currentcountbinary(interaction):
   count_file_binary.close()
 # endregion
 
-@tree.command(name="cue_redeem", description="Redeems the currently available free cue piece from 8ballpool.com using your user id (1 for help)")
+''' @tree.command(name="cue_redeem", description="(Currently unusable) Redeems the currently available free cue piece from 8ballpool.com using your user id (1 for help)")
 # region /cue_redeem
 async def CueRedeem(interaction: discord.Interaction, userid: int):
   """Redeems the cue piece from 8 ball pool's api"""
@@ -224,7 +224,7 @@ async def CueRedeem(interaction: discord.Interaction, userid: int):
           await interaction.followup.send(f"Error redeeming today's cue piece.\nStatus code:\t{cue_StatusCode}")
       else:
         await interaction.followup.send(f"Failed to retrieve SKU for the free cue piece with category wildcard: {category_wildcard}.")
-# endregion
+# endregion '''
 
 @tree.command(name="mute", description="Mutes a user")
 @app_commands.describe(
@@ -374,10 +374,10 @@ async def Translate(interaction: discord.Interaction, text: str, from_language: 
   await interaction.followup.send(translation, ephemeral=ephemeral)
 # endregion
 
-@tree.command(name="upload", description="Uploads a file to sxcu.net and returns the URL")
+@tree.command(name="upload", description="Uploads a file to catbox.moe and returns the URL")
 @app_commands.user_install()
 @app_commands.allowed_contexts(True, True, True)
-@app_commands.describe(link="The link to the file to upload", optional_message="An optional message to send with the file")
+@app_commands.describe(link="The link to the video to upload", optional_message="An optional message to send with the file")
 # region /upload
 async def upload(interaction: discord.Interaction, link: str, optional_message: str = ""):
   if interaction.user.id != 717471432816459840:
@@ -388,7 +388,16 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
     skip = True
 
   regex = re.compile(
-    r"((http|https):\/\/)(www\.)?([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,6}(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?"
+    r"""
+    (?P<protocol>https?://)    # Protocol
+    (?P<www>www\.)?    # Optional www
+    (?P<host>    # Entire host (domain + TLD)
+        (?:[\w\-.~%]+|\p{L}[\p{L}\d\-]*\.)*    # Optional subdomains
+        (?:[\w\-.~%]+|\p{L}[\p{L}\d\-]*)    # Main domain + TLD
+    )
+    (?P<path>/[\w\-._~:/?#[\]@!$&'()*+,;=%\p{L}]*)?  # Optional path/query/fragment
+    """,
+    re.VERBOSE | re.IGNORECASE | re.UNICODE
   )
   if not re.search(regex, link) and not skip:
     await interaction.response.send_message("Invalid link", ephemeral=True)
