@@ -16,6 +16,7 @@ import ffmpeg
 # import yt_dlp
 import random
 import datetime
+from typing import Optional
 
 # region startup
 intents = discord.Intents.default()
@@ -243,7 +244,7 @@ async def remute(interaction: discord.Interaction, voice_channel: discord.VoiceC
     await interaction.response.defer(ephemeral=True)
     await tempMember.edit(mute=mute)
     if time != 0 and mute:
-      mutingmessage = await interaction.followup.send(f"{'Muted' if mute else 'Unmuted'} {user.display_name} for {time} seconds")
+      mutingmessage = await interaction.followup.send(f"{'Muted' if mute else 'Unmuted'} {user.display_name} for {time} seconds", wait=True)
       await asyncio.sleep(time)
       await tempMember.edit(mute=False)
       await interaction.followup.edit_message(mutingmessage.id, content = f"Unmuted <@{user.id}> after {time} seconds")
@@ -269,7 +270,7 @@ async def deafen(interaction: discord.Interaction, voice_channel: discord.VoiceC
   else:
     await tempMember.edit(deafen=deafen)
     if time != 0 and deafen:
-      deafeningmessage = await interaction.followup.send(f"{'Deafened' if deafen else 'Undeafened'} {user.display_name} for {time} seconds")
+      deafeningmessage = await interaction.followup.send(f"{'Deafened' if deafen else 'Undeafened'} {user.display_name} for {time} seconds", wait=True)
       await asyncio.sleep(time)
       await tempMember.edit(deafen=False)
       await interaction.followup.edit_message(deafeningmessage.id, content = f"Undeafened {user.mention} after {time} seconds")
@@ -511,7 +512,7 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
   await interaction.response.defer(ephemeral=True)
   # region download file
   if not skip:
-    message1 = await interaction.followup.send("Downloading file", ephemeral=True)
+    message1 = await interaction.followup.send("Downloading file", ephemeral=True, wait=True)
     process = await asyncio.create_subprocess_exec(
       'yt-dlp', link, "--no-part", "-o", "temp.webm",
       stdout=asyncio.subprocess.PIPE,
@@ -552,7 +553,7 @@ async def upload(interaction: discord.Interaction, link: str, optional_message: 
   if int(data["format"]["size"]) <= 1.0e+7:
     await interaction.followup.send("File is smaller than 10MB, uploading directly.", ephemeral=True)
     print("uploading directly")
-    if interaction.channel.id == 1278161126860787837:
+    if interaction.channel and interaction.channel.id == 1278161126860787837:
       async with aiohttp.ClientSession() as session:
         messagewebhook = discord.Webhook.from_url(webhook, session=session)
         await messagewebhook.send(optional_message, file=discord.File(file), username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
@@ -685,7 +686,7 @@ async def universalsonglinkfromlink(interaction: discord.Interaction, link: str,
   artist = data["entitiesByUniqueId"][SongID]["artistName"]
 
   if converttoplatform == musicStreamingServices.all:
-    interaction.followup.send(f"all music players for {song} by {artist}: {data["pageUrl"]}")
+    await interaction.followup.send(f"all music players for {song} by {artist}: {data["pageUrl"]}")
     return
   else:
     selected_platform = converttoplatform.value
@@ -779,7 +780,7 @@ async def universalsonglinkfromstatus(interaction: discord.Interaction, songname
 
 @tree.command(name="random_image", description="Sends a random image from channel history")
 @app_commands.allowed_contexts(True, False, False)
-async def random_image(interaction: discord.Interaction, channel: discord.TextChannel = None):
+async def random_image(interaction: discord.Interaction, channel: Optional[discord.TextChannel] = None):
   await interaction.response.defer()
   guild = interaction.guild
   images = []
@@ -799,7 +800,7 @@ async def random_image(interaction: discord.Interaction, channel: discord.TextCh
       if not found:
         break
 
-  if channel is None:
+  if channel is None and guild is not None:
     for channel in guild.text_channels:
       try:
         print(f"Checking channel: {channel.name}")
@@ -809,7 +810,7 @@ async def random_image(interaction: discord.Interaction, channel: discord.TextCh
       except asyncio.TimeoutError:
         print(f"Timeout while fetching images from {channel.name}")
         continue
-  else:
+  elif channel:
     try:
       print(f"Checking channel: {channel.name}")
       await asyncio.wait_for(fetch_images(channel), timeout=20)
