@@ -161,6 +161,12 @@ class utility(commands.Cog):
             await interaction.followup.send("No images found in channel history.", ephemeral=True)
 
 
+    @app_commands.describe(
+        link = "The link to download the video from",
+        optional_message = "Optional message to send along with the video"
+    )
+    @app_commands.allowed_contexts(True, True, True)
+    @app_commands.allowed_installs(True, True)
     @app_commands.command(**bigDict["upload"])
     async def upload(self, interaction: discord.Interaction, link: str, optional_message: str = ""):
         if interaction.user.id != 717471432816459840:
