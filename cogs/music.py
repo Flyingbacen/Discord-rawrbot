@@ -56,6 +56,35 @@ class music(commands.Cog):
         Youtube = "youtube"
         Youtube_Music = "youtubeMusic"
 
+    class OpenInAppView(discord.ui.View):
+        def __init__(self, platform: str, song_url: str, song: str = "", artist: str = ""):
+            super().__init__(timeout=300)  # 5 minute timeout
+            self.platform = platform
+            self.song_url = song_url
+            # self.song = song
+            # self.artist = artist
+            
+            """
+            if platform == "appleMusic":
+                app_url = f"music://{song_url.split('https://')[1]}"
+                self.add_item(
+                    discord.ui.Button(
+                        label="Open in Apple Music App",
+                        url=app_url,
+                        style=discord.ButtonStyle.link,
+                        emoji="🎵"
+                    )
+                )
+            """
+            self.add_item(
+                discord.ui.Button(
+                    label="Fancy button for you to press",
+                    url=song_url,
+                    style=discord.ButtonStyle.link,
+                    emoji="🤰"
+                )
+            )
+
 
     @app_commands.describe(
         link="The link to the song", 
@@ -98,7 +127,8 @@ class music(commands.Cog):
             except KeyError:
                 await interaction.followup.send(f"Could not find a link for {selected_platform.capitalize()}, defaulting to all platforms:\n*{song}* by {artist}: {data["pageUrl"]}")
                 return
-            await interaction.followup.send(f"*{song}* by {artist}:\n{song_url}")
+            view = self.OpenInAppView(selected_platform, song_url) # Unfortunately, only http(s)/discord is supported :/
+            await interaction.followup.send(f"*{song}* by {artist}:\n{song_url}", view=view)
 
 
     @app_commands.describe(
