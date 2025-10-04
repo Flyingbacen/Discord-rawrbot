@@ -90,6 +90,18 @@ class utility(commands.Cog):
             app_commands.Choice(name="Urdu", value="ur")
         ]
 
+    class Button(discord.ui.View):
+        def __init__(self):
+            super().__init__(timeout=300)  # 5 minute timeout
+            
+            self.add_item(
+                discord.ui.Button(
+                    label="test button",
+                    url="discord://-/guilds/create",
+                    style=discord.ButtonStyle.link,
+                    emoji="🎵"
+                )
+            )
 
     @app_commands.autocomplete(from_language=languages)
     @app_commands.autocomplete(to_language=languages)
@@ -317,6 +329,15 @@ class utility(commands.Cog):
         await interaction.followup.send(response_data, username=interaction.user.display_name, avatar_url=interaction.user.display_avatar.url)
         os.remove(file)
         self.lock.release()
+
+
+    @app_commands.allowed_contexts(True, True, True)
+    @app_commands.allowed_installs(False, True)
+    @app_commands.command(**bigDict["test"])
+    async def test(self, interaction: discord.Interaction):
+        view = self.Button()
+        await interaction.response.send_message("Hello", view=view)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(utility(bot))
