@@ -190,6 +190,7 @@ class utility(commands.Cog):
             skip = True
         if (interaction.user.id == 717471432816459840 and link.endswith(" use-cookie")):
             usecookie = ["--cookies-from-browser", r"\"opera:%appdata%/Opera Software/Opera GX Stable/\""]
+            link = link.split(" use-cookie")[0]
         else:
             usecookie = []
 
