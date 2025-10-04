@@ -1,3 +1,4 @@
+import warnings
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -176,15 +177,16 @@ class utility(commands.Cog):
         if any(link.lower().startswith(drive_letter) for drive_letter in ["c:", "d:"]):
             skip = True
 
+        warnings.filterwarnings("ignore", message="Possible nested set", category=FutureWarning)
         regex = re.compile(
             r"""
             (?P<protocol>https?://)    # Protocol
             (?P<www>www\.)?    # Optional www
             (?P<host>    # Entire host (domain + TLD)
-                (?:[\w\-.~%]+|\p{L}[\p{L}\d\-]*\.)*    # Optional subdomains
-                (?:[\w\-.~%]+|\p{L}[\p{L}\d\-]*)    # Main domain + TLD
+                (?:[\w\-.~%]+|[^\W\d_]{L}[[^\W\d_]{L}\d\-]*\.)*    # Optional subdomains
+                (?:[\w\-.~%]+|[^\W\d_]{L}[[^\W\d_]{L}\d\-]*)    # Main domain + TLD
             )
-            (?P<path>/[\w\-._~:/?#[\]@!$&'()*+,;=%\p{L}]*)?  # Optional path/query/fragment
+            (?P<path>/[\w\-._~:/?#[\]@!$&'()*+,;=%[^\W\d_]{L}]*)?  # Optional path/query/fragment
             """,
             re.VERBOSE | re.IGNORECASE | re.UNICODE
         )
