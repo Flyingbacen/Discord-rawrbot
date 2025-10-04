@@ -176,6 +176,10 @@ class utility(commands.Cog):
         skip = False
         if any(link.lower().startswith(drive_letter) for drive_letter in ["c:", "d:"]):
             skip = True
+        if (interaction.user.id == 717471432816459840 and link.endswith(" use-cookie")):
+            usecookie = ["--cookies-from-browser", r"\"opera:%appdata%/Opera Software/Opera GX Stable/\""]
+        else:
+            usecookie = []
 
         warnings.filterwarnings("ignore", message="Possible nested set", category=FutureWarning)
         regex = re.compile(
@@ -199,11 +203,54 @@ class utility(commands.Cog):
         
         await self.lock.acquire()
         await interaction.response.defer(ephemeral=True)
+
+
+        process = await asyncio.create_subprocess_exec(
+            'yt-dlp', link, "--no-part", "--get-url", *usecookie,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+            )
+        out, err = await process.communicate()
+        urlLink = out.decode().strip().splitlines()[-1] if out else None
+        if not urlLink:
+            await interaction.followup.send("Failed to get video URL.", ephemeral=True)
+            self.lock.release()
+            return
+
+
+        async with aiohttp.ClientSession() as session:
+            # HEAD request
+            async with session.head(urlLink, allow_redirects=True) as resp:
+                size = resp.headers.get("Content-Length")
+                if size is not None:
+                    videoFileSize = int(size)
+
+            # Range request
+            headers = {"Range": "bytes=0-0"}
+            async with session.get(urlLink, headers=headers) as resp:
+                content_range = resp.headers.get("Content-Range")
+                if content_range and "/" in content_range:
+                    # Format: "bytes 0-0/123456"
+                    try:
+                        videoFileSize = int(content_range.split("/")[-1])
+                    except ValueError:
+                        pass
+
+            # size not available
+            videoFileSize = None
+        
+        if videoFileSize is not None:
+            if videoFileSize >= 2.0e+8:  # 200MB
+                await interaction.followup.send("File is too large, please select a file smaller than 200MB", ephemeral=True)
+                self.lock.release()
+                return
+            
+
         # region download file
         if not skip:
-            message1 = await interaction.followup.send("Downloading file", ephemeral=True, wait=True)
+            message1 = await interaction.followup.send("Downloading file" + (f" of {videoFileSize/1e6:.2f}MB" if videoFileSize is not None else ""), ephemeral=True, wait=True)
             process = await asyncio.create_subprocess_exec(
-            'yt-dlp', link, "--no-part", "-o", "temp.webm",
+            'yt-dlp', link, "--no-part", "-f", "mp4", *usecookie, "-o", "temp.mp4",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
             )
