@@ -81,7 +81,7 @@ class music(commands.Cog):
                     label="Fancy button for you to press",
                     url=song_url,
                     style=discord.ButtonStyle.link,
-                    emoji="🤰"
+                    emoji="🫃🏻"
                 )
             )
 
