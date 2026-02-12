@@ -91,15 +91,15 @@ class utility(commands.Cog):
         ]
 
     class Button(discord.ui.View):
-        def __init__(self):
+        def __init__(self, label: str, url: str, emoji: str):
             super().__init__(timeout=300)  # 5 minute timeout
             
             self.add_item(
                 discord.ui.Button(
-                    label="test button",
-                    url="discord://-/guilds/create",
+                    label=label,
+                    url=url,
                     style=discord.ButtonStyle.link,
-                    emoji="🎵"
+                    emoji=emoji
                 )
             )
 
@@ -335,9 +335,9 @@ class utility(commands.Cog):
     @app_commands.allowed_contexts(True, True, True)
     @app_commands.allowed_installs(False, True)
     @app_commands.command(**bigDict["test"])
-    async def test(self, interaction: discord.Interaction):
-        view = self.Button()
-        await interaction.response.send_message("Hello", view=view)
+    async def test(self, interaction: discord.Interaction, text: str = "lookies :3", label: str = "silly", url: str = "discord://-/", emoji: str = "🐺"):
+        view = self.Button(label, url, emoji)
+        await interaction.response.send_message(text, view=view)
 
 
 async def setup(bot: commands.Bot):
