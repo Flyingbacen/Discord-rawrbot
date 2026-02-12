@@ -124,13 +124,19 @@ class General(commands.Cog):
             await interaction.followup.send("Commands synced successfully.")
             print("Synced commands")
             await asyncio.sleep(10)
-            await interaction.delete_original_response()
+            try:
+                await interaction.delete_original_response()
+            except discord.errors.NotFound: # User deleted message before we deleted it
+                pass
             return
         else:
             await interaction.response.send_message("Missing perms")
             print("[missing perms] failed to sync commands")
             await asyncio.sleep(5)
-            await interaction.delete_original_response()
+            try:
+                await interaction.delete_original_response()
+            except discord.errors.NotFound: # User deleted message before we deleted it
+                pass
         
 
 async def setup(bot: commands.Bot):
