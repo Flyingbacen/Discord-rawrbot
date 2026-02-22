@@ -63,27 +63,26 @@ class music(commands.Cog):
             self.song_url = song_url
             # self.song = song
             # self.artist = artist
-            
-            """
             if platform == "appleMusic":
-                app_url = f"music://{song_url.split('https://')[1]}"
                 self.add_item(
                     discord.ui.Button(
                         label="Open in Apple Music App",
-                        url=app_url,
+                        url="https://flyingbacen.github.io/?protocol=music&launchargs=" + urllib.parse.quote(song_url.split('https://')[1], []),
+                        # f"music://{song_url.split('https://')[1]}"
+                        # we could just use the above, but discord limits to discord:// and https://
                         style=discord.ButtonStyle.link,
                         emoji="🎵"
                     )
                 )
-            """
-            self.add_item(
-                discord.ui.Button(
-                    label="Fancy button for you to press",
-                    url=song_url,
-                    style=discord.ButtonStyle.link,
-                    emoji="🫃🏻"
+            else:
+                self.add_item(
+                    discord.ui.Button(
+                        label="Open in browser",
+                        url=song_url,
+                        style=discord.ButtonStyle.link,
+                        emoji="🫃🏻"
+                    )
                 )
-            )
 
 
     @app_commands.describe(
@@ -176,7 +175,7 @@ class music(commands.Cog):
             spotifySongURL = spotify_track_data["tracks"]["items"][0]["external_urls"]["spotify"]
             spotifySongName = spotify_track_data["tracks"]["items"][0]["name"]
             spotifySongArtist = spotify_track_data["tracks"]["items"][0]["artists"][0]["name"]
-            await interaction.followup.send(f"*{spotifySongName}* by {spotifySongArtist}:\n{spotifySongURL}") # Don't wanna use the song.link API more than needed :3
+            await interaction.followup.send(f"*{spotifySongName}* by {spotifySongArtist}:\n{spotifySongURL}", view=self.OpenInAppView("spotify", spotifySongURL)) # Don't wanna use the song.link API more than needed :3
             return
 
         # get song link
@@ -197,7 +196,7 @@ class music(commands.Cog):
             except KeyError:
                 await interaction.followup.send(f"Could not find a link for {selected_platform.capitalize()}, defaulting to all platforms:\n*{song}* by {artist}: {data["pageUrl"]}")
                 return
-            await interaction.followup.send(f"*{song}* by {artist}:\n{song_url}")
+            await interaction.followup.send(f"*{song}* by {artist}:\n{song_url}", view=self.OpenInAppView(selected_platform, song_url))
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(music(bot))
